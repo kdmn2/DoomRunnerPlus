@@ -48,23 +48,13 @@ class UpdateChecker : public QObject, protected LoggingComponent {
 
  private:
 
-	void requestFinished( QNetworkReply * reply );
-
-	// one update check consists of 2 phases - request to version file and request to changelog
-	enum class Phase
-	{
-		VersionRequest,
-		ChangelogRequest,
-	};
 	struct RequestData
 	{
-		Phase phase;
-		QString newVersion;
 		ResultCallback callback;
 	};
 
-	void versionReceived( QNetworkReply * reply, RequestData & requestData );
-	void changelogReceived( QNetworkReply * reply, RequestData & requestData );
+	void requestFinished( QNetworkReply * reply );
+	void releaseReceived( QNetworkReply * reply, RequestData & requestData );
 
  private:
 

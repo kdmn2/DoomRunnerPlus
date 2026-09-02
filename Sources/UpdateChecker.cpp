@@ -16,7 +16,9 @@
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QRegularExpression>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 #include <QStringBuilder>
 #include <QMessageBox>
@@ -30,9 +32,8 @@
 //======================================================================================================================
 // UpdateChecker
 
-static const QString availableVersionUrl = "https://raw.githubusercontent.com/Youda008/DoomRunner/master/version.txt";
-static const QString releasePageUrl = "https://github.com/Youda008/DoomRunner/releases";
-static const QString changelogUrl = "https://raw.githubusercontent.com/Youda008/DoomRunner/master/changelog.txt";
+static const QString latestReleaseApiUrl = "https://api.github.com/repos/kdmn2/DoomRunnerPlus/releases/latest";
+static const QString releasePageUrl = "https://github.com/kdmn2/DoomRunnerPlus/releases";
 
 
 UpdateChecker::UpdateChecker()
@@ -47,10 +48,12 @@ UpdateChecker::~UpdateChecker() = default;
 void UpdateChecker::checkForUpdates_async( ResultCallback && callback )
 {
 	QNetworkRequest request;
-	request.setUrl( availableVersionUrl );
+	request.setUrl( latestReleaseApiUrl );
+	request.setRawHeader( "Accept", "application/vnd.github+json" );
+	request.setRawHeader( "User-Agent", "DoomRunnerPlus" );
 	QNetworkReply * reply = manager.get( request );
 
-	pendingRequests[ reply ] = { Phase::VersionRequest, {}, std::move(callback) };
+	pendingRequests[ reply ] = { std::move(callback) };
 }
 
 void UpdateChecker::requestFinished( QNetworkReply * reply )
@@ -72,82 +75,59 @@ void UpdateChecker::requestFinished( QNetworkReply * reply )
 		return;
 	}
 
-	if (requestData.phase == Phase::VersionRequest)
-	{
-		versionReceived( reply, requestData );
-	}
-	else
-	{
-		changelogReceived( reply, requestData );
-	}
+	releaseReceived( reply, requestData );
 }
 
-void UpdateChecker::versionReceived( QNetworkReply * reply, RequestData & requestData )
+void UpdateChecker::releaseReceived( QNetworkReply * reply, RequestData & requestData )
 {
-	QString version( reply->readLine( 16 ) );
-
-	static const QRegularExpression versionFileRegex("^\"([0-9\\.]+)\"$");
-	auto match = versionFileRegex.match( version );
-	if (!match.hasMatch())
+	const QJsonDocument doc = QJsonDocument::fromJson( reply->readAll() );
+	if (!doc.isObject())
 	{
-		logLogicError().noquote() << "Version number from github is in invalid format ("<<version<<"). Fix it!";
-		requestData.callback( InvalidFormat, std::move(version), {} );
-		return;
-	}
-	QString availableVersionStr = match.captured(1);
-	Version availableVersion( availableVersionStr );
-
-	bool updateAvailable = availableVersion > appVersion;
-	if (!updateAvailable)
-	{
-		requestData.callback( UpdateNotAvailable, {}, { availableVersionStr } );
+		requestData.callback( InvalidFormat, "invalid JSON", {} );
 		return;
 	}
 
-	QNetworkRequest request;
-	request.setUrl( changelogUrl );
-	QNetworkReply * reply2 = manager.get( request );
+	const QJsonObject release = doc.object();
 
-	pendingRequests[ reply2 ] = { Phase::ChangelogRequest, std::move(availableVersionStr), std::move(requestData.callback) };
-}
+	// the release tag names the version, e.g. "v2.0.0"
+	QString versionStr = release[ "tag_name" ].toString();
+	if (versionStr.startsWith( 'v' ) || versionStr.startsWith( 'V' ))
+		versionStr.remove( 0, 1 );
 
-// fucking Qt, are you fucking kidding me?
-static QString getLine( QNetworkReply * reply )
-{
-	QString line( reply->readLine() );  // what fucking sense does it make to include the '\n' char at every line
-	line.chop(1);                       // so that the user has to chop it himself???
-	return line;
-}
+	const Version availableVersion( versionStr );
+	if (!availableVersion.isValid())
+	{
+		logLogicError().noquote() << "Release tag from github is in invalid format ("<<versionStr<<"). Fix it!";
+		requestData.callback( InvalidFormat, std::move(versionStr), {} );
+		return;
+	}
 
-void UpdateChecker::changelogReceived( QNetworkReply * reply, RequestData & requestData )
-{
-	/* changelog format
-	1.5
-	- tool-buttons got icons instead of symbols
-	- added button to add a directory of mods
-	- added button to create a new config from an existing one
+	if (!(availableVersion > appVersion))
+	{
+		requestData.callback( UpdateNotAvailable, {}, { versionStr } );
+		return;
+	}
 
-	1.4
-	- added new launch options for video, audio and save/screenshot directory
-	- added tooltips for some of the launch options
-	- map names are now extracted from IWAD file instead of guessing them from IWAD name
+	// find the .AppImage download link among the release assets
+	QString downloadUrl;
+	const QJsonArray assets = release[ "assets" ].toArray();
+	for (const QJsonValue & value : assets)
+	{
+		const QJsonObject asset = value.toObject();
+		const QString name = asset[ "name" ].toString();
+		if (name.endsWith( QLatin1String(".AppImage"), Qt::CaseInsensitive ))
+		{
+			downloadUrl = asset[ "browser_download_url" ].toString();
+			break;
+		}
+	}
 
-	1.3
-	...
-	*/
-
-	QString line;
+	// versionInfo contract: [0] version, [1] download URL, [2..] release notes
 	QStringList versionInfo;
+	versionInfo.append( versionStr );
+	versionInfo.append( downloadUrl );
+	versionInfo.append( release[ "body" ].toString().split( '\n' ) );
 
-	// find the line with the new version
-	while ((line = getLine( reply )) != requestData.newVersion && !reply->atEnd()) {}
-	versionInfo.append( line );
-
-	// get all changes until our current version
-	while ((line = getLine( reply )) != appVersion && !reply->atEnd())
-		versionInfo.append( std::move(line) );
-
-	// finally, call the user callback with all the data
 	requestData.callback( UpdateAvailable, {}, std::move(versionInfo) );
 }
 
@@ -251,6 +231,12 @@ bool showUpdateNotification( QWidget * parent, const QStringList & versionInfo, 
 {
 	QString newVersion = versionInfo.first();
 
+	// versionInfo contract: [0] version, [1] download URL, [2..] release notes
+	QString downloadUrl = versionInfo.size() > 1 ? versionInfo[ 1 ] : QString();
+	if (downloadUrl.isEmpty())
+		downloadUrl = releasePageUrl;
+	QStringList releaseNotes = versionInfo.mid( 2 );
+
 	QMessageBox msgBox( QMessageBox::Information, "Update available", {}, QMessageBox::Ok, parent );
 
 	// On Windows we need to manually make title bar of every new window dark, if dark theme is used.
@@ -278,12 +264,12 @@ bool showUpdateNotification( QWidget * parent, const QStringList & versionInfo, 
 			"</body></html>"
 		);
 
-		newElements.textBrowser->setText( versionInfo.join('\n') );
+		newElements.textBrowser->setText( releaseNotes.join('\n') );
 
 		newElements.secondLabel->setText(
 			"<html><head/><body>"
 			"<p>"
-				"You can download it at " HYPERLINK( releasePageUrl, releasePageUrl ) "."
+				"You can download it at " HYPERLINK( downloadUrl, downloadUrl ) "."
 			"</p>"
 			"</body></html>"
 		);
@@ -296,15 +282,15 @@ bool showUpdateNotification( QWidget * parent, const QStringList & versionInfo, 
 				"Version "%newVersion%" is available."
 			"</p><p>"
 				"You can download it at<br>"
-				HYPERLINK( releasePageUrl, releasePageUrl ) "."
+				HYPERLINK( downloadUrl, downloadUrl ) "."
 			"</p><p>"
 				"Bellow you can see what's new."
 			"</p>"
 			"</body></html>"
 		);
 
-		// show changelog at least in the message box details
-		msgBox.setDetailedText( versionInfo.join('\n') );
+		// show release notes at least in the message box details
+		msgBox.setDetailedText( releaseNotes.join('\n') );
 
 		// automatically expand the details section
 		const QList< QAbstractButton * > buttons = msgBox.buttons();

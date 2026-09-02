@@ -29,7 +29,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Doom Runner</string>
+      <string>Doom Runner Plus</string>
      </property>
      <property name="textFormat">
       <enum>Qt::RichText</enum>

@@ -30,7 +30,7 @@ PROJECT_NAME="$(basename "$SOURCE_DIR")"
 pushd "$SOURCE_DIR" 1>/dev/null
 trap "popd 1>/dev/null; echo" EXIT
 
-DESKTOP_APP_NAME="Doom Runner"
+DESKTOP_APP_NAME="Doom Runner Plus"
 APP_NAME_UNDERSCORED="${DESKTOP_APP_NAME// /_}"
 
 function echo_and_eval() {
