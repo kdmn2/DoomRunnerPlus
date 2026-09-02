@@ -12,11 +12,37 @@
 #include "FileSystemUtils.hpp"  // isValidFile
 #include "ErrorHandling.hpp"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+
 #include <minizip/unzip.h>
 
 
 //======================================================================================================================
 // implementation
+
+namespace {
+
+/// Normalizes a zip entry path so that it can be safely joined to a target directory.
+/** Returns an empty string for entries that would escape the target directory (absolute paths,
+  * path-traversal segments, or Windows drive prefixes). */
+QString safeEntryPath( const QString & entryName )
+{
+	QString path = entryName;
+	path.replace( '\\', '/' );
+	while (path.startsWith( '/' ))
+		path.remove( 0, 1 );
+
+	if (path.split( '/' ).contains( QStringLiteral("..") ))
+		return QString();
+	if (path.size() >= 2 && path[ 0 ].isLetter() && path[ 1 ] == ':')
+		return QString();  // Windows drive prefix
+
+	return path;
+}
+
+} // namespace
 
 // logging helper
 class LoggingZipReader : protected LoggingComponent {
@@ -118,4 +144,70 @@ UncertainFileContent readOneOfFilesInsideZip( const QString & zipFilePath, const
 {
 	LoggingZipReader zipReader( zipFilePath );
 	return zipReader.readOneOfFilesInsideZip( innerFileNames );
+}
+
+bool extractZipArchive( const QString & zipFilePath, const QString & targetDir )
+{
+	unzFile zipFile = unzOpen( zipFilePath.toUtf8().constData() );
+	if (!zipFile)
+		return false;
+	auto zipFileGuard = autoClosable( zipFile, unzClose );
+
+	const QDir outDir( targetDir );
+	if (!outDir.exists() && !outDir.mkpath( "." ))
+		return false;
+
+	if (unzGoToFirstFile( zipFile ) != UNZ_OK)
+		return true;  // empty archive
+
+	do
+	{
+		char nameBuffer [4096];
+		unz_file_info64 fileInfo;
+		if (unzGetCurrentFileInfo64( zipFile, &fileInfo, nameBuffer, sizeof(nameBuffer), nullptr, 0, nullptr, 0 ) != UNZ_OK)
+			return false;
+
+		const QString entryName = safeEntryPath( QString::fromUtf8( nameBuffer ) );
+		if (entryName.isEmpty())
+			continue;  // unsafe entry, skip it
+
+		if (entryName.endsWith( '/' ))
+		{
+			if (!outDir.mkpath( entryName ))
+				return false;
+			continue;
+		}
+
+		const QString outPath = outDir.filePath( entryName );
+
+		// make sure the parent directory exists
+		if (!QDir().mkpath( QFileInfo( outPath ).absolutePath() ))
+			return false;
+
+		if (unzOpenCurrentFile( zipFile ) != UNZ_OK)
+			return false;
+		auto currentFileGuard = atScopeEndDo( [ &zipFile ]() { unzCloseCurrentFile( zipFile ); } );
+
+		QFile outFile( outPath );
+		if (!outFile.open( QIODevice::WriteOnly ))
+			return false;
+
+		char buffer [64 * 1024];
+		int bytesRead;
+		while ((bytesRead = unzReadCurrentFile( zipFile, buffer, sizeof(buffer) )) > 0)
+		{
+			if (outFile.write( buffer, bytesRead ) != bytesRead)
+			{
+				outFile.close();
+				return false;
+			}
+		}
+		outFile.close();
+
+		if (bytesRead < 0)
+			return false;
+	}
+	while (unzGoToNextFile( zipFile ) == UNZ_OK);
+
+	return true;
 }

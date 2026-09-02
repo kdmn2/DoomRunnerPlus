@@ -22,6 +22,7 @@ class QTreeWidgetItem;
 class QTextEdit;
 class QLineEdit;
 class QPushButton;
+class QCheckBox;
 class QLabel;
 class QProgressBar;
 class QNetworkAccessManager;
@@ -69,6 +70,13 @@ class CacowardsTab : public QWidget {
 	void setTargetDir( const QString & dir );
 	QString targetDir() const;
 
+	void setAutosort( bool enabled );
+	bool autosort() const;
+	void setUnpack( bool enabled );
+	bool unpack() const;
+	void setDeleteAfterExtract( bool enabled );
+	bool deleteAfterExtract() const;
+
 	/// Sets the path of the JSON file the Cacowards list is loaded from and saved to.
 	void setDataFilePath( const QString & path );
 
@@ -79,6 +87,11 @@ class CacowardsTab : public QWidget {
 
 	/// Emitted when the user changes the download target directory.
 	void targetDirChanged( const QString & dir );
+
+	/// Emitted when the user changes one of the download options.
+	void autosortChanged( bool enabled );
+	void unpackChanged( bool enabled );
+	void deleteAfterExtractChanged( bool enabled );
 
  private slots:
 
@@ -100,6 +113,7 @@ class CacowardsTab : public QWidget {
 	{
 		QString filePath;     ///< absolute path where the file will be saved
 		QString relativePath; ///< path of the file within the archive (used to build mirror URLs)
+		QString title;        ///< entry title, used to name the folder when unpacking
 	};
 
 	void buildUi();
@@ -127,12 +141,12 @@ class CacowardsTab : public QWidget {
 	QNetworkReply * downloadReply_ = nullptr;
 	QFile * downloadFile_ = nullptr;   ///< file currently being written to during a download
 	QString downloadPath_;             ///< absolute path of the file currently being downloaded
+	QString downloadTitle_;            ///< entry title of the file currently being downloaded
 	QStringList downloadUrls_;         ///< candidate mirror URLs for the current download
 	int downloadUrlIdx_ = 0;           ///< index of the mirror currently being tried
 	QList< PendingDownload > pendingDownloads_;   ///< files still waiting to be downloaded
 	int downloadCount_ = 0;            ///< total number of files in the current download batch
 	bool batchActive_ = false;         ///< whether a download batch is currently running
-	bool updatingChecks_ = false;      ///< guard against recursive itemChanged handling
 
 	QList< CacowardEntry > entries_;   ///< the currently displayed list
 
@@ -154,6 +168,9 @@ class CacowardsTab : public QWidget {
 	QPushButton * importBtn_ = nullptr;
 	QPushButton * browseBtn_ = nullptr;
 	QPushButton * downloadBtn_ = nullptr;
+	QCheckBox * autosortChk_ = nullptr;
+	QCheckBox * unpackChk_ = nullptr;
+	QCheckBox * deleteAfterExtractChk_ = nullptr;
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
 	QString dataFilePath_;

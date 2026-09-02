@@ -358,6 +358,9 @@ struct ModSettings
 	QString lastUsedDir;
 	QString idgamesDownloadDir;     ///< directory where files downloaded from the /idgames archive are saved
 	QString cacowardsDownloadDir;   ///< directory where Cacowards-awarded WADs are saved
+	bool cacowardsAutosort = false;          ///< sort Cacowards downloads into "Cacowards/[Year]/[Category]" subfolders
+	bool cacowardsUnpack = false;            ///< extract Cacowards downloads into folders named after the archive
+	bool cacowardsDeleteAfterExtract = false;///< delete the original archive after extracting it
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;

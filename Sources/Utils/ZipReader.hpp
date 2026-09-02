@@ -28,5 +28,11 @@ using UncertainFileContent = ValueOrError<QByteArray, ReadStatus, ReadStatus::Su
   * but InfoNotPresent when none of the innerFileNames is found. */
 UncertainFileContent readOneOfFilesInsideZip( const QString & zipFilePath, const QStringList & innerFileNames );
 
+/// Extracts all files from a zip archive into targetDir, preserving the archive's internal directory structure.
+/** BEWARE that this operation may be very time consuming, depending on the size of the file and level of compression.
+  * Entry paths are sanitized so that no file is written outside of targetDir.
+  * Returns false if the archive cannot be opened or any entry cannot be extracted. */
+bool extractZipArchive( const QString & zipFilePath, const QString & targetDir );
+
 
 #endif // ZIP_READER_INCLUDED

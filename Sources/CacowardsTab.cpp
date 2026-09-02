@@ -7,12 +7,15 @@
 
 #include "CacowardsTab.hpp"
 
+#include "Utils/ZipReader.hpp"   // extractZipArchive
+
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QTreeWidgetItemIterator>
 #include <QTextEdit>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QCheckBox>
 #include <QLabel>
 #include <QProgressBar>
 #include <QNetworkAccessManager>
@@ -87,45 +90,6 @@ int categoryRank( const QString & category )
 	return 3;
 }
 
-/// Recursively applies a check state to an item and all of its descendants.
-void setCheckStateRecursively( QTreeWidgetItem * item, Qt::CheckState state )
-{
-	for (int i = 0; i < item->childCount(); ++i)
-	{
-		QTreeWidgetItem * child = item->child( i );
-		child->setCheckState( 0, state );
-		setCheckStateRecursively( child, state );
-	}
-}
-
-/// Updates the check state of an item's ancestors to reflect the state of their children.
-void updateAncestorCheckStates( QTreeWidgetItem * parent )
-{
-	while (parent)
-	{
-		int checkedCnt = 0, uncheckedCnt = 0;
-		for (int i = 0; i < parent->childCount(); ++i)
-		{
-			const Qt::CheckState state = parent->child( i )->checkState( 0 );
-			if (state == Qt::Checked)
-				checkedCnt++;
-			else if (state == Qt::Unchecked)
-				uncheckedCnt++;
-		}
-
-		Qt::CheckState parentState;
-		if (checkedCnt == 0)
-			parentState = Qt::Unchecked;
-		else if (uncheckedCnt == 0)
-			parentState = Qt::Checked;
-		else
-			parentState = Qt::PartiallyChecked;
-
-		parent->setCheckState( 0, parentState );
-		parent = parent->parent();
-	}
-}
-
 } // namespace
 
 
@@ -155,6 +119,37 @@ void CacowardsTab::setTargetDir( const QString & dir )
 QString CacowardsTab::targetDir() const
 {
 	return targetDirLine_->text().trimmed();
+}
+
+void CacowardsTab::setAutosort( bool enabled )
+{
+	autosortChk_->setChecked( enabled );
+}
+
+bool CacowardsTab::autosort() const
+{
+	return autosortChk_->isChecked();
+}
+
+void CacowardsTab::setUnpack( bool enabled )
+{
+	unpackChk_->setChecked( enabled );
+	deleteAfterExtractChk_->setEnabled( enabled );
+}
+
+bool CacowardsTab::unpack() const
+{
+	return unpackChk_->isChecked();
+}
+
+void CacowardsTab::setDeleteAfterExtract( bool enabled )
+{
+	deleteAfterExtractChk_->setChecked( enabled );
+}
+
+bool CacowardsTab::deleteAfterExtract() const
+{
+	return deleteAfterExtractChk_->isChecked();
 }
 
 void CacowardsTab::setDataFilePath( const QString & path )
@@ -219,6 +214,24 @@ void CacowardsTab::buildUi()
 	downloadRow->addSpacing( 10 );
 	downloadRow->addWidget( downloadBtn_ );
 
+	//-- download options -------------------------------------------------------
+
+	autosortChk_ = new QCheckBox( "Autosort", this );
+	autosortChk_->setToolTip( "Save downloads into \"Cacowards/[Year]/[Category]\" subfolders" );
+
+	unpackChk_ = new QCheckBox( "Unpack", this );
+	unpackChk_->setToolTip( "Extract each downloaded ZIP into a folder named after the archive" );
+
+	deleteAfterExtractChk_ = new QCheckBox( "Delete after extracting", this );
+	deleteAfterExtractChk_->setToolTip( "Delete the original archive after it has been unpacked" );
+	deleteAfterExtractChk_->setEnabled( false );
+
+	QHBoxLayout * optionsRow = new QHBoxLayout;
+	optionsRow->addStretch( 1 );
+	optionsRow->addWidget( autosortChk_ );
+	optionsRow->addWidget( unpackChk_ );
+	optionsRow->addWidget( deleteAfterExtractChk_ );
+
 	//-- status bar -------------------------------------------------------------
 
 	statusLabel_ = new QLabel( "Loading Cacowards data...", this );
@@ -233,6 +246,7 @@ void CacowardsTab::buildUi()
 	QVBoxLayout * mainLayout = new QVBoxLayout( this );
 	mainLayout->addWidget( treePanel, 1 );
 	mainLayout->addLayout( downloadRow );
+	mainLayout->addLayout( optionsRow );
 	mainLayout->addWidget( progressBar_ );
 	mainLayout->addWidget( statusLabel_ );
 
@@ -250,6 +264,16 @@ void CacowardsTab::buildUi()
 	connect( targetDirLine_, &QLineEdit::textChanged, this, [ this ]( const QString & text )
 	{
 		emit targetDirChanged( text.trimmed() );
+	});
+
+	connect( autosortChk_, &QCheckBox::toggled, this, &CacowardsTab::autosortChanged );
+	connect( unpackChk_, &QCheckBox::toggled, this, &CacowardsTab::unpackChanged );
+	connect( deleteAfterExtractChk_, &QCheckBox::toggled, this, &CacowardsTab::deleteAfterExtractChanged );
+
+	// "delete after extracting" only makes sense when unpacking is enabled
+	connect( unpackChk_, &QCheckBox::toggled, this, [ this ]( bool enabled )
+	{
+		deleteAfterExtractChk_->setEnabled( enabled );
 	});
 }
 
@@ -456,8 +480,9 @@ void CacowardsTab::onRefreshYearFetched()
 void CacowardsTab::parseCacowardsWikitext( int year, const QString & wikitext, QList< CacowardEntry > & out ) const
 {
 	static const QRegularExpression headingRe( QStringLiteral("^\\s*={2,6}\\s*(.+?)\\s*={2,6}\\s*$") );
-	static const QRegularExpression idRe( QStringLiteral("id=(\\d+)") );
-	static const QRegularExpression titleRe( QStringLiteral("'''\\[\\[([^\\]|]+)") );
+	static const QRegularExpression idRe( QStringLiteral("\\{\\{ig\\|id=(\\d+)") );
+	static const QRegularExpression fileRe( QStringLiteral("\\{\\{ig\\|file=([^}|]+)") );
+	static const QRegularExpression titleRe( QStringLiteral("^\\s*\\*\\s*\\[\\[([^\\]|]+)") );
 
 	QString currentCategory;
 
@@ -467,20 +492,21 @@ void CacowardsTab::parseCacowardsWikitext( int year, const QString & wikitext, Q
 		const auto headingMatch = headingRe.match( line );
 		if (headingMatch.hasMatch())
 		{
-			currentCategory = classifyCategory( headingMatch.captured( 1 ).trimmed() );
+			// keep the current category when a heading isn't an award section (e.g. a sub-heading)
+			const QString category = classifyCategory( headingMatch.captured( 1 ).trimmed() );
+			if (!category.isEmpty())
+				currentCategory = category;
 			continue;
 		}
 
-		// only list entries that carry a direct idgames link
-		if (!line.contains( "idgames" ) || !line.contains( "id=" ))
-			continue;
-
-		const auto idMatch = idRe.match( line );
-		if (!idMatch.hasMatch())
-			continue;
-
-		const QString category = currentCategory;  // (already classified)
+		const QString category = currentCategory;
 		if (category.isEmpty())
+			continue;
+
+		// only list entries that carry an idgames link (either a numeric id or a file path)
+		const auto idMatch = idRe.match( line );
+		const auto fileMatch = fileRe.match( line );
+		if (!idMatch.hasMatch() && !fileMatch.hasMatch())
 			continue;
 
 		QString title;
@@ -494,7 +520,22 @@ void CacowardsTab::parseCacowardsWikitext( int year, const QString & wikitext, Q
 		entry.year = year;
 		entry.category = category;
 		entry.title = title;
-		entry.id = idMatch.captured( 1 ).toInt();
+
+		if (idMatch.hasMatch())
+		{
+			entry.id = idMatch.captured( 1 ).toInt();
+		}
+		else
+		{
+			// the file= link carries the path within the archive, e.g. "levels/doom2/Ports/megawads/valiant"
+			const QString file = fileMatch.captured( 1 ).trimmed();
+			const int slash = file.lastIndexOf( '/' );
+			entry.dir = file.left( slash + 1 );
+			entry.filename = file.mid( slash + 1 );
+			if (!entry.filename.contains( '.' ))
+				entry.filename += QLatin1String(".zip");
+		}
+
 		out.append( entry );
 	}
 }
@@ -596,10 +637,10 @@ void CacowardsTab::parseExportXml( const QByteArray & xml, QList< CacowardEntry 
 			case QXmlStreamReader::EndElement:
 				if (reader.name().toString() == QLatin1String("page"))
 				{
-					if (pageTitle.startsWith( QLatin1String("Cacowards_") ))
+					if (pageTitle.startsWith( QLatin1String("Cacowards_") ) || pageTitle.startsWith( QLatin1String("Cacowards ") ))
 					{
 						bool ok = false;
-						const int year = pageTitle.mid( 10 ).toInt( &ok );  // len("Cacowards_") == 10
+						const int year = pageTitle.mid( 10 ).trimmed().toInt( &ok );  // len("Cacowards_") == len("Cacowards ") == 10
 						if (ok)
 							parseCacowardsWikitext( year, pageText, out );
 					}
@@ -677,7 +718,15 @@ void CacowardsTab::importExportedXml()
 
 void CacowardsTab::startNextRefreshResolution()
 {
-	// skip entries that couldn't be resolved (they have no download path)
+	// entries that already carry a download path (from a file= idgames link) need no API lookup
+	while (refreshResolveIdx_ < refreshEntries_.size()
+		&& !refreshEntries_[ refreshResolveIdx_ ].dir.isEmpty()
+		&& !refreshEntries_[ refreshResolveIdx_ ].filename.isEmpty())
+	{
+		refreshResolveIdx_++;
+	}
+
+	// all entries processed - drop any that still couldn't be resolved (they have no download path)
 	if (refreshResolveIdx_ >= refreshEntries_.size())
 	{
 		QList< CacowardEntry > resolved;
@@ -798,21 +847,12 @@ void CacowardsTab::onCurrentItemChanged( QTreeWidgetItem * current, QTreeWidgetI
 	detailsView_->setPlainText( text );
 }
 
-void CacowardsTab::onItemChanged( QTreeWidgetItem * item, int column )
+void CacowardsTab::onItemChanged( QTreeWidgetItem * /*item*/, int column )
 {
-	if (column != 0 || updatingChecks_)
+	// the year/category/leaf check states are kept in sync by Qt's ItemIsAutoTristate flag,
+	// so here we only need to reflect the current state on the download button
+	if (column != 0)
 		return;
-
-	updatingChecks_ = true;
-
-	// checking/unchecking a year or category propagates to all descendant leaves
-	if (item->childCount() > 0)
-		setCheckStateRecursively( item, item->checkState( 0 ) );
-
-	// reflect the new leaf states on the ancestors
-	updateAncestorCheckStates( item->parent() );
-
-	updatingChecks_ = false;
 
 	updateDownloadBtnState();
 }
@@ -848,9 +888,14 @@ QList< CacowardsTab::PendingDownload > CacowardsTab::collectCheckedDownloads() c
 
 		const CacowardEntry & entry = entries_[ idx ];
 		const QString fileName = sanitizeFileName( entry.filename );
-		const QString filePath = QDir( targetDir() ).filePath( fileName );
 
-		downloads.append( PendingDownload{ filePath, entry.relativePath() } );
+		QString subDir;
+		if (autosortChk_->isChecked())
+			subDir = QString( "Cacowards/%1/%2" ).arg( entry.year ).arg( sanitizeFileName( entry.category ) );
+
+		const QString filePath = QDir( targetDir() ).filePath( subDir.isEmpty() ? fileName : subDir + '/' + fileName );
+
+		downloads.append( PendingDownload{ filePath, entry.relativePath(), entry.title } );
 	}
 
 	return downloads;
@@ -959,6 +1004,7 @@ void CacowardsTab::startNextDownload()
 	for (const char * base : kDownloadMirrors)
 		downloadUrls_.append( QString::fromLatin1( base ) + next.relativePath );
 	downloadUrlIdx_ = 0;
+	downloadTitle_ = next.title;
 
 	startDownload( next.filePath );
 }
@@ -977,6 +1023,10 @@ void CacowardsTab::startDownload( const QString & filePath )
 
 	downloadReply_ = network_->get( request );
 	downloadPath_ = filePath;
+
+	// make sure the parent directory exists (it may be a nested autosort subfolder)
+	QDir().mkpath( QFileInfo( filePath ).absolutePath() );
+
 	downloadFile_ = new QFile( filePath );
 	if (!downloadFile_->open( QIODevice::WriteOnly ))
 	{
@@ -1055,10 +1105,37 @@ void CacowardsTab::onDownloadFinished()
 	const QString savedPath = downloadPath_;
 	downloadPath_.clear();
 
+	const QString savedTitle = downloadTitle_;
+	downloadTitle_.clear();
+
 	if (success)
 	{
-		setStatus( "Downloaded to \"" + savedPath + "\"." );
-		emit downloadFinished( savedPath );
+		if (unpackChk_->isChecked())
+		{
+			const QFileInfo savedInfo( savedPath );
+			const QString title = savedTitle.trimmed();
+			const QString folderName = title.isEmpty() ? savedInfo.completeBaseName() : sanitizeFileName( title );
+			const QString extractDir = savedInfo.dir().filePath( folderName );
+
+			if (extractZipArchive( savedPath, extractDir ))
+			{
+				if (deleteAfterExtractChk_->isChecked())
+					QFile::remove( savedPath );
+
+				setStatus( "Unpacked to \"" + extractDir + "\"." );
+				emit downloadFinished( extractDir );
+			}
+			else
+			{
+				setStatus( "Downloaded to \"" + savedPath + "\", but unpacking failed." );
+				emit downloadFinished( savedPath );
+			}
+		}
+		else
+		{
+			setStatus( "Downloaded to \"" + savedPath + "\"." );
+			emit downloadFinished( savedPath );
+		}
 		startNextDownload();
 		return;
 	}

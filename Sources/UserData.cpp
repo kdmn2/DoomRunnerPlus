@@ -637,6 +637,9 @@ QJsonObject ModSettings::serialize() const
 	settingsJs["last_used_dir"] = settings.lastUsedDir;
 	settingsJs["idgames_download_dir"] = settings.idgamesDownloadDir;
 	settingsJs["cacowards_download_dir"] = settings.cacowardsDownloadDir;
+	settingsJs["cacowards_autosort"] = settings.cacowardsAutosort;
+	settingsJs["cacowards_unpack"] = settings.cacowardsUnpack;
+	settingsJs["cacowards_delete_after_extract"] = settings.cacowardsDeleteAfterExtract;
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -649,6 +652,9 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 	settings.lastUsedDir = settingsJs.getString( "last_used_dir" );
 	settings.idgamesDownloadDir = settingsJs.getString( "idgames_download_dir" );
 	settings.cacowardsDownloadDir = settingsJs.getString( "cacowards_download_dir" );
+	settings.cacowardsAutosort = settingsJs.getBool( "cacowards_autosort", settings.cacowardsAutosort );
+	settings.cacowardsUnpack = settingsJs.getBool( "cacowards_unpack", settings.cacowardsUnpack );
+	settings.cacowardsDeleteAfterExtract = settingsJs.getBool( "cacowards_delete_after_extract", settings.cacowardsDeleteAfterExtract );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

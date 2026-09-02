@@ -941,12 +941,30 @@ MainWindow::MainWindow()
 
 	cacowardsTab = new CacowardsTab( this );
 	cacowardsTab->setTargetDir( !modSettings.cacowardsDownloadDir.isEmpty() ? modSettings.cacowardsDownloadDir : modSettings.idgamesDownloadDir );
+	cacowardsTab->setAutosort( modSettings.cacowardsAutosort );
+	cacowardsTab->setUnpack( modSettings.cacowardsUnpack );
+	cacowardsTab->setDeleteAfterExtract( modSettings.cacowardsDeleteAfterExtract );
 	int cacowardsTabIdx = ui->tabWidget->addTab( cacowardsTab, "Cacowards" );
 	ui->tabWidget->setTabToolTip( cacowardsTabIdx, "Browse and download Cacowards-awarded WADs from /idgames" );
 	connect( cacowardsTab, &CacowardsTab::downloadFinished, this, &ThisClass::addDownloadedMod );
 	connect( cacowardsTab, &CacowardsTab::targetDirChanged, this, [ this ]( const QString & dir )
 	{
 		modSettings.cacowardsDownloadDir = dir;
+		scheduleSavingOptions();
+	});
+	connect( cacowardsTab, &CacowardsTab::autosortChanged, this, [ this ]( bool enabled )
+	{
+		modSettings.cacowardsAutosort = enabled;
+		scheduleSavingOptions();
+	});
+	connect( cacowardsTab, &CacowardsTab::unpackChanged, this, [ this ]( bool enabled )
+	{
+		modSettings.cacowardsUnpack = enabled;
+		scheduleSavingOptions();
+	});
+	connect( cacowardsTab, &CacowardsTab::deleteAfterExtractChanged, this, [ this ]( bool enabled )
+	{
+		modSettings.cacowardsDeleteAfterExtract = enabled;
 		scheduleSavingOptions();
 	});
 
