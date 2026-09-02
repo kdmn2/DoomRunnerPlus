@@ -26,6 +26,7 @@
 #include "EngineTraits.hpp"
 #include "DoomFiles.hpp"
 #include "IdgamesTab.hpp"
+#include "CacowardsTab.hpp"
 
 #include "Utils/LangUtils.hpp"
 #include "Utils/ContainerUtils.hpp"
@@ -56,6 +57,7 @@
 
 static const char defaultOptionsFileName [] = "options.json";
 static const char defaultCacheFileName [] = "file_info_cache.json";
+static const char defaultCacowardsFileName [] = "cacowards.json";
 
 enum EnvVarsColumn
 {
@@ -935,6 +937,19 @@ MainWindow::MainWindow()
 		scheduleSavingOptions();
 	});
 
+	// setup the Cacowards tab
+
+	cacowardsTab = new CacowardsTab( this );
+	cacowardsTab->setTargetDir( !modSettings.cacowardsDownloadDir.isEmpty() ? modSettings.cacowardsDownloadDir : modSettings.idgamesDownloadDir );
+	int cacowardsTabIdx = ui->tabWidget->addTab( cacowardsTab, "Cacowards" );
+	ui->tabWidget->setTabToolTip( cacowardsTabIdx, "Browse and download Cacowards-awarded WADs from /idgames" );
+	connect( cacowardsTab, &CacowardsTab::downloadFinished, this, &ThisClass::addDownloadedMod );
+	connect( cacowardsTab, &CacowardsTab::targetDirChanged, this, [ this ]( const QString & dir )
+	{
+		modSettings.cacowardsDownloadDir = dir;
+		scheduleSavingOptions();
+	});
+
 	// setup combo-boxes
 
 	// we use custom model for engines, because we want to display the same list differently in different window
@@ -1358,6 +1373,7 @@ void MainWindow::initAppDataDir()
 
 	optionsFilePath = appDataDir.filePath( defaultOptionsFileName );
 	cacheFilePath = appDataDir.filePath( defaultCacheFileName );
+	cacowardsTab->setDataFilePath( appDataDir.filePath( defaultCacowardsFileName ) );
 }
 
 // This is called when the window layout is initialized and widget sizes calculated,

@@ -636,6 +636,7 @@ QJsonObject ModSettings::serialize() const
 
 	settingsJs["last_used_dir"] = settings.lastUsedDir;
 	settingsJs["idgames_download_dir"] = settings.idgamesDownloadDir;
+	settingsJs["cacowards_download_dir"] = settings.cacowardsDownloadDir;
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -647,6 +648,7 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 
 	settings.lastUsedDir = settingsJs.getString( "last_used_dir" );
 	settings.idgamesDownloadDir = settingsJs.getString( "idgames_download_dir" );
+	settings.cacowardsDownloadDir = settingsJs.getString( "cacowards_download_dir" );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

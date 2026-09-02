@@ -1,0 +1,922 @@
+[
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Action Doom",
+  "id": 12671,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "action.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Chosen",
+  "id": 12363,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "ch133.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Community Chest 2",
+  "id": 13024,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "cchest2.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Decade",
+  "id": 12849,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "decade.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Grove",
+  "id": 12430,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "grove.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Hell Revealed II",
+  "id": 12349,
+  "dir": "themes/hr/",
+  "filename": "hr2final.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Phobos Revisited",
+  "id": 12835,
+  "dir": "levels/doom/p-r/",
+  "filename": "phobos-v.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "RTC-3057",
+  "id": 12747,
+  "dir": "levels/doom2/Ports/0-9/",
+  "filename": "3057hub1.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "The ZDoom Community Map Project \"Take 1\"",
+  "id": 12815,
+  "dir": "levels/doom2/Ports/v-z/",
+  "filename": "zdmcmp1.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Winners",
+  "title": "Tremor",
+  "id": 12782,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "tremor.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Runners-Up",
+  "title": "Deus Vult",
+  "id": 12597,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dv.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Runners-Up",
+  "title": "Massmouthmas",
+  "id": 13055,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "massmas.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Runners-Up",
+  "title": "Super Sonic Doom",
+  "id": 13056,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "sonic.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Honorable Mention",
+  "title": "Daedalus: Alien Defense",
+  "id": 12291,
+  "dir": "themes/TeamTNT/daedalus/",
+  "filename": "daedalus.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Other Awards",
+  "title": "8 Bits Deathmatch",
+  "id": 12451,
+  "dir": "levels/doom2/deathmatch/Ports/0-9/",
+  "filename": "8bitdm.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Other Awards",
+  "title": "Doomworld Forums 3",
+  "id": 12371,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dwforums3.zip"
+ },
+ {
+  "year": 2004,
+  "category": "Other Awards",
+  "title": "Hellcore",
+  "id": 12870,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "hellcore.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Congestion 1024",
+  "id": 13958,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "1024.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Crimson Canyon",
+  "id": 13317,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "crmsn37.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "HeDRoX",
+  "id": 13458,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "hedrox.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Hi-Tech Hell 2 - Alien Tech",
+  "id": 13603,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "hth2.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Kama Sutra",
+  "id": 13290,
+  "dir": "levels/doom2/megawads/",
+  "filename": "ksutra.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Scythe 2",
+  "id": 13600,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "scythe2.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Simplicity",
+  "id": 15043,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "sp_usimp.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Suspended in Dusk",
+  "id": 13851,
+  "dir": "levels/doom2/s-u/",
+  "filename": "sid.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Temple of Chaos 2 - Warped Reality",
+  "id": 13402,
+  "dir": "levels/doom2/s-u/",
+  "filename": "sp_chao2.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Winners",
+  "title": "Total Control",
+  "id": 13845,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "total666.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Runners-Up",
+  "title": "Altar of Evil",
+  "id": 13700,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "altar666.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Runners-Up",
+  "title": "For Whom the Bell Tolls",
+  "id": 13934,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "belltoll.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Other Awards",
+  "title": "Jägermörder 2: Terra Nova",
+  "id": 13722,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dmdjm02.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Other Awards",
+  "title": "Kama Sutra",
+  "id": 13290,
+  "dir": "levels/doom2/megawads/",
+  "filename": "ksutra.zip"
+ },
+ {
+  "year": 2005,
+  "category": "Other Awards",
+  "title": "Ni'mRoD - Project Doom",
+  "id": 14015,
+  "dir": "deathmatch/skulltag/",
+  "filename": "nimrodpd.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Crucified Dreams",
+  "id": 14485,
+  "dir": "levels/doom2/deathmatch/Ports/megawads/",
+  "filename": "crudream.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Hellcore 2.0",
+  "id": 14651,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "hc20.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "IC2005",
+  "id": 14025,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "ic2005.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Newdoom Community Project",
+  "id": 14102,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "ndcp.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Operation Overlord",
+  "id": 14095,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "njol.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Phobia",
+  "id": 14248,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "phobiata.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Phocas Island 2",
+  "id": 14661,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "phocas2.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "The Classic Episode, Part 2",
+  "id": 14090,
+  "dir": "levels/doom/Ports/a-c/",
+  "filename": "class_e2.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Winners",
+  "title": "Vae Victus 2",
+  "id": 14582,
+  "dir": "levels/doom2/Ports/v-z/",
+  "filename": "vv2.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Runners-Up",
+  "title": "Oniria",
+  "id": 14521,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "oniria.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Runners-Up",
+  "title": "Zen Dynamics",
+  "id": 14669,
+  "dir": "levels/doom2/Ports/v-z/",
+  "filename": "zendyn_x.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Other Awards",
+  "title": "Crucified Dreams",
+  "id": 14485,
+  "dir": "levels/doom2/deathmatch/Ports/megawads/",
+  "filename": "crudream.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Other Awards",
+  "title": "Dynamite Deathmatch",
+  "id": 14568,
+  "dir": "deathmatch/skulltag/",
+  "filename": "dynamite.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Other Awards",
+  "title": "How Not To Be Seen!",
+  "id": 14111,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "hntbs.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Other Awards",
+  "title": "Impossible: A New Reality",
+  "id": 14650,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "imposs.zip"
+ },
+ {
+  "year": 2006,
+  "category": "Other Awards",
+  "title": "TurboCharged ARCADE!",
+  "id": 14671,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "turbodem.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Cheogsh",
+  "id": 15060,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "cheogsh.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Community Chest 3",
+  "id": 15156,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "cchest3.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Epic",
+  "id": 15125,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "epic.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Genesis of Descent",
+  "id": 14866,
+  "dir": "levels/doom/Ports/g-i/",
+  "filename": "god_.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Knee-Deep in ZDoom",
+  "id": 17250,
+  "dir": "levels/doom/Ports/megawads/",
+  "filename": "kdizd_12.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Sine Die",
+  "id": 15135,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "sinedie.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "Songs of the Damned",
+  "id": 14710,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "songs.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "The Dying End",
+  "id": 15016,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "tde-lutz.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "The Outer Darkness",
+  "id": 15061,
+  "dir": "levels/doom/Ports/m-o/",
+  "filename": "odark.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Winners",
+  "title": "The Ultimate Torment and Torture",
+  "id": 15107,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "tutnt.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Runners-Up",
+  "title": "Demons of Problematique",
+  "id": 15048,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dop.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Runners-Up",
+  "title": "Wonderful Doom",
+  "id": 16642,
+  "dir": "levels/doom/megawads/",
+  "filename": "wd13.zip"
+ },
+ {
+  "year": 2007,
+  "category": "Other Awards",
+  "title": "It Only Gets Worse",
+  "id": 15034,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "iogw.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Action Doom 2: Urban Brawl",
+  "id": 15430,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "action2.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Back to Basics",
+  "id": 15174,
+  "dir": "levels/doom/a-c/",
+  "filename": "b2b.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "BGPA Missions: Liberation",
+  "id": 15457,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "njbgpabh.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Cold as Hell",
+  "id": 15496,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "cah_se.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Deus Vult II",
+  "id": 15238,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dvii-1i.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "E1M8: Thunderpeak Powerplant (ZPack)",
+  "id": 15409,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "thunpeak.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Escape from Castle Chezcrea",
+  "id": 15220,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "crea_one.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Eternal Doom IV: Return from Oblivion",
+  "id": 15193,
+  "dir": "themes/TeamTNT/ed4_rfo/",
+  "filename": "ed4_rfo1.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Winners",
+  "title": "Gravity",
+  "id": 15467,
+  "dir": "levels/doom2/Ports/g-i/",
+  "filename": "gravity.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Runners-Up",
+  "title": "Remain 3",
+  "id": 15426,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "riii.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Runners-Up",
+  "title": "XXXI CyberSky",
+  "id": 15434,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "cybersky.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Other Awards",
+  "title": "32in24-7: Return of the Night of Capture the Flag",
+  "id": 15397,
+  "dir": "levels/doom2/deathmatch/Ports/megawads/",
+  "filename": "32in24-7.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Other Awards",
+  "title": "Community Is Falling 3",
+  "id": 15252,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "cif3.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Other Awards",
+  "title": "Deus Vult II",
+  "id": 15238,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dvii-1i.zip"
+ },
+ {
+  "year": 2008,
+  "category": "Other Awards",
+  "title": "UAC Military Nightmare",
+  "id": 17641,
+  "dir": "themes/terrywads/",
+  "filename": "uacmnnew.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Arcadia Demade",
+  "id": 16179,
+  "dir": "levels/doom2/Ports/a-c/",
+  "filename": "arcadia.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Curse of D'Sparil",
+  "id": 15999,
+  "dir": "levels/heretic/Ports/",
+  "filename": "curse.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Drip Feed",
+  "id": 16084,
+  "dir": "levels/doom2/Ports/d-f/",
+  "filename": "dripfeed.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Epic 2",
+  "id": 16262,
+  "dir": "levels/doom2/megawads/",
+  "filename": "epic2.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Speed of Doom",
+  "id": 16040,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "sodfinal.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Stronghold: On the Edge of Chaos",
+  "id": 16248,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "strhedge.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "UAC Ultra",
+  "id": 16038,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "uacultra.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Unloved",
+  "id": 16060,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "unloved.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Winners",
+  "title": "Valhalla",
+  "id": 16255,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "ma_val.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Runners-Up",
+  "title": "Base Ganymede",
+  "id": 16256,
+  "dir": "levels/doom/a-c/",
+  "filename": "bge2.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Runners-Up",
+  "title": "Beyond Revival",
+  "id": 16273,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "revival.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Honorable Mention",
+  "title": "Paranoid",
+  "id": 16290,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "paranoid.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Honorable Mention",
+  "title": "Realm of Cheogsh",
+  "id": 16174,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "roch.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Honorable Mention",
+  "title": "Serpent: Resurrection",
+  "id": 16211,
+  "dir": "levels/hexen/s-u/",
+  "filename": "serpent.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Honorable Mention",
+  "title": "Temple of the Lizard Men 2",
+  "id": 16274,
+  "dir": "levels/doom2/Ports/j-l/",
+  "filename": "lmtmpl2.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Honorable Mention",
+  "title": "Threshold of Pain",
+  "id": 16196,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "scl_top.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Other Awards",
+  "title": "Stronghold: On the Edge of Chaos",
+  "id": 16248,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "strhedge.zip"
+ },
+ {
+  "year": 2010,
+  "category": "Other Awards",
+  "title": "TurboCharged ARCADE! - The Sequel Episode!",
+  "id": 16299,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "turbotwo.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Double Impact",
+  "id": 16419,
+  "dir": "levels/doom/Ports/d-f/",
+  "filename": "dbimpact.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Icebound",
+  "id": 16357,
+  "dir": "levels/heretic/Ports/",
+  "filename": "ice-lutz.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Jenesis",
+  "id": 16640,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "jenesis.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Khorus' Speedy Shit",
+  "id": 16639,
+  "dir": "levels/doom2/megawads/",
+  "filename": "kssht.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Lunatic",
+  "id": 16551,
+  "dir": "levels/doom2/Ports/j-l/",
+  "filename": "lunatic.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Mandrill Ass Project",
+  "id": 16462,
+  "dir": "levels/doom2/Ports/m-o/",
+  "filename": "mandrill.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Plutonia: Revisited Community Project",
+  "id": 16429,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "prcp.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Reverie",
+  "id": 16630,
+  "dir": "levels/doom2/megawads/",
+  "filename": "reverie.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Winners",
+  "title": "Vanguard",
+  "id": 16463,
+  "dir": "levels/doom2/Ports/v-z/",
+  "filename": "vanguard.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Honorable Mention",
+  "title": "Suitcase of Gor",
+  "id": 18738,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "suitcgor.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Other Awards",
+  "title": "1994 Tune-up Community Project",
+  "id": 16561,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "1994tu.zip"
+ },
+ {
+  "year": 2011,
+  "category": "Other Awards",
+  "title": "32in24-11: Occupy Doomworld",
+  "id": 16620,
+  "dir": "levels/doom2/deathmatch/Ports/megawads/",
+  "filename": "32in2411.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "Back to Saturn X",
+  "id": 18748,
+  "dir": "levels/doom2/megawads/",
+  "filename": "btsx_e1.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "Doom 2 the Way id Did",
+  "id": 17424,
+  "dir": "levels/doom2/megawads/",
+  "filename": "d2twid.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "Pirate Doom",
+  "id": 17722,
+  "dir": "levels/doom2/Ports/p-r/",
+  "filename": "pirates.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "Swim With The Whales",
+  "id": 17426,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "swtw.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "The ZDoom Community Map Project \"Take 2\"",
+  "id": 17682,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "zdcmp2.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Winners",
+  "title": "Unholy Realms",
+  "id": 17415,
+  "dir": "levels/doom2/megawads/",
+  "filename": "ur.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Runners-Up",
+  "title": "Hellbound",
+  "id": 17259,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "hellbnd.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Runners-Up",
+  "title": "Soulcrusher",
+  "id": 17206,
+  "dir": "levels/doom2/Ports/s-u/",
+  "filename": "scmn12.zip"
+ },
+ {
+  "year": 2013,
+  "category": "Other Awards",
+  "title": "The ZDoom Community Map Project \"Take 2\"",
+  "id": 17682,
+  "dir": "levels/doom2/Ports/megawads/",
+  "filename": "zdcmp2.zip"
+ }
+]

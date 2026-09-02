@@ -32,6 +32,7 @@ class QComboBox;
 class QLineEdit;
 class QShortcut;
 class IdgamesTab;
+class CacowardsTab;
 
 #include <memory>
 
@@ -397,6 +398,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	Ui::MainWindow * ui = nullptr;
 	SearchPanel * presetSearchPanel = nullptr;
 	IdgamesTab * idgamesTab = nullptr;
+	CacowardsTab * cacowardsTab = nullptr;
 
 	QAction * hideLabelAction = nullptr;
 

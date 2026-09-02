@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file alias="DoomRunner.ico">DoomRunner.ico</file>
+        <file alias="cacowards.json">cacowards.json</file>
         <file alias="AddItem.png">Buttons/AddItem.png</file>
         <file alias="AddFile.png">Buttons/AddFile.png</file>
         <file alias="AddDir.png">Buttons/AddDir.png</file>
