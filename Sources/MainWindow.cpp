@@ -25,6 +25,7 @@
 #include "Themes.hpp"
 #include "EngineTraits.hpp"
 #include "DoomFiles.hpp"
+#include "IdgamesTab.hpp"
 
 #include "Utils/LangUtils.hpp"
 #include "Utils/ContainerUtils.hpp"
@@ -920,6 +921,19 @@ MainWindow::MainWindow()
 	setupMapPackList();
 	setupModList();
 	setupEnvVarLists();
+
+	// setup the /idgames download tab
+
+	idgamesTab = new IdgamesTab( this );
+	idgamesTab->setTargetDir( !modSettings.idgamesDownloadDir.isEmpty() ? modSettings.idgamesDownloadDir : modSettings.lastUsedDir );
+	int idgamesTabIdx = ui->tabWidget->addTab( idgamesTab, "IdGames" );
+	ui->tabWidget->setTabToolTip( idgamesTabIdx, "Browse and download WADs/ZIPs from the Doomworld /idgames archive" );
+	connect( idgamesTab, &IdgamesTab::downloadFinished, this, &ThisClass::addDownloadedMod );
+	connect( idgamesTab, &IdgamesTab::targetDirChanged, this, [ this ]( const QString & dir )
+	{
+		modSettings.idgamesDownloadDir = dir;
+		scheduleSavingOptions();
+	});
 
 	// setup combo-boxes
 
@@ -3522,6 +3536,32 @@ void MainWindow::modAddDir()
 		return;
 
 	modSettings.lastUsedDir = DialogWithPaths::lastUsedDir;
+
+	Mod mod( path, /*checked*/true );
+
+	wdg::appendItem( ui->modListView, modModel, mod );
+
+	// add it also to the current preset
+	if (selectedPreset)
+	{
+		selectedPreset->mods.append( mod );
+	}
+
+	// some mods contain custom map names -> update the corresponding combo-boxes
+	if (canAnyOfTheFilesContainMapNames({ path }))
+	{
+		updateMapNamesFromSelectedFiles();
+		selectStartingMapFromSelectedFiles();
+	}
+
+	scheduleSavingOptions();
+	updateLaunchCommand();
+}
+
+void MainWindow::addDownloadedMod( const QString & path )
+{
+	if (path.isEmpty())
+		return;
 
 	Mod mod( path, /*checked*/true );
 

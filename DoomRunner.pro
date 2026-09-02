@@ -99,6 +99,7 @@ HEADERS += \
 	Sources/DoomFiles.hpp \
 	Sources/EngineTraits.hpp \
 	Sources/Essential.hpp \
+	Sources/IdgamesTab.hpp \
 	Sources/MainWindowPtr.hpp \
 	Sources/MainWindow.hpp \
 	Sources/OptionsSerializer.hpp \
@@ -155,6 +156,7 @@ SOURCES += \
 	Sources/Widgets/SearchPanel.cpp \
 	Sources/DoomFiles.cpp \
 	Sources/EngineTraits.cpp \
+	Sources/IdgamesTab.cpp \
 	Sources/MainWindow.cpp \
 	Sources/OptionsSerializer.cpp \
 	Sources/Themes.cpp \

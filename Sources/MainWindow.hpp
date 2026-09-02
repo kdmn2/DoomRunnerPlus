@@ -31,6 +31,7 @@ class QItemSelection;
 class QComboBox;
 class QLineEdit;
 class QShortcut;
+class IdgamesTab;
 
 #include <memory>
 
@@ -121,6 +122,8 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onModsDropped( int row, int count, DnDSources dndSource );
 	void onMapsAfterModsToggled( bool checked );
 	void onModIconsToggled();
+
+	void addDownloadedMod( const QString & path );
 
 	void onModeChosen_Default();
 	void onModeChosen_LaunchMap();
@@ -393,6 +396,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 
 	Ui::MainWindow * ui = nullptr;
 	SearchPanel * presetSearchPanel = nullptr;
+	IdgamesTab * idgamesTab = nullptr;
 
 	QAction * hideLabelAction = nullptr;
 

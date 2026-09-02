@@ -356,6 +356,7 @@ struct MapSettings
 struct ModSettings
 {
 	QString lastUsedDir;
+	QString idgamesDownloadDir;   ///< directory where files downloaded from the /idgames archive are saved
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;
