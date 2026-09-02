@@ -31,6 +31,8 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QDate>
+#include <QDesktopServices>
+#include <QXmlStreamReader>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
@@ -46,6 +48,9 @@ constexpr const char * kUserAgent = "DoomRunner/2.0 (cacowards browser)";
 
 constexpr const char * kIdgamesApiBase = "https://www.doomworld.com/idgames/api/api.php";
 constexpr const char * kDoomwikiIndex = "https://doomwiki.org/w/index.php";
+
+/// Wayback Machine URL prefix used to fetch a doomwiki Cacowards year page without tripping Cloudflare.
+constexpr const char * kWaybackYearPrefix = "https://web.archive.org/web/2025/https://doomwiki.org/wiki/Cacowards_";
 
 /// Download mirrors of the /idgames archive, tried in order.
 /** The primary doomworld.com URL 301-redirects to legacy.doomworld.com whose TLS
@@ -167,9 +172,13 @@ void CacowardsTab::buildUi()
 	refreshBtn_ = new QPushButton( "Refresh", this );
 	refreshBtn_->setToolTip( "Re-download the Cacowards list from doomwiki.org and save it to disk" );
 
+	importBtn_ = new QPushButton( "Import...", this );
+	importBtn_->setToolTip( "Load the Cacowards list from a doomwiki export XML file you downloaded in your browser" );
+
 	QHBoxLayout * refreshRow = new QHBoxLayout;
 	refreshRow->addStretch( 1 );
 	refreshRow->addWidget( refreshBtn_ );
+	refreshRow->addWidget( importBtn_ );
 
 	tree_ = new QTreeWidget( this );
 	tree_->setColumnCount( 1 );
@@ -226,6 +235,7 @@ void CacowardsTab::buildUi()
 	//-- signal/slot wiring -----------------------------------------------------
 
 	connect( refreshBtn_, &QPushButton::clicked, this, &CacowardsTab::refresh );
+	connect( importBtn_, &QPushButton::clicked, this, &CacowardsTab::importExportedXml );
 	connect( tree_, &QTreeWidget::currentItemChanged, this, &CacowardsTab::onCurrentItemChanged );
 	connect( tree_, &QTreeWidget::itemChanged, this, &CacowardsTab::onItemChanged );
 	connect( browseBtn_, &QPushButton::clicked, this, &CacowardsTab::browseTargetDir );
@@ -375,6 +385,7 @@ void CacowardsTab::refresh()
 	refreshResolvedCount_ = 0;
 
 	refreshBtn_->setEnabled( false );
+	importBtn_->setEnabled( false );
 	progressBar_->setVisible( true );
 	progressBar_->setRange( 0, 0 );
 	setStatus( "Refreshing Cacowards list..." );
@@ -389,9 +400,7 @@ void CacowardsTab::startNextRefreshYear()
 		// all years fetched, now resolve the idgames ids into download paths
 		if (refreshEntries_.isEmpty())
 		{
-			progressBar_->setVisible( false );
-			refreshBtn_->setEnabled( true );
-			setStatus( "Refresh failed: could not retrieve the Cacowards list (doomwiki.org may be blocking automated access)." );
+			fallbackToBrowserExport();
 			return;
 		}
 		refreshResolveIdx_ = 0;
@@ -402,11 +411,8 @@ void CacowardsTab::startNextRefreshYear()
 
 	const int year = refreshYears_[ refreshYearIdx_ ];
 
-	QUrl url( kDoomwikiIndex );
-	QUrlQuery query;
-	query.addQueryItem( "title", QString( "Cacowards_%1" ).arg( year ) );
-	query.addQueryItem( "action", "raw" );
-	url.setQuery( query );
+	const QString urlString = QString::fromLatin1( kWaybackYearPrefix ) + QString::number( year );
+	QUrl url( urlString );
 
 	QNetworkRequest request( url );
 	request.setRawHeader( "User-Agent", kUserAgent );
@@ -431,8 +437,8 @@ void CacowardsTab::onRefreshYearFetched()
 
 		if (ok)
 		{
-			const QString wikitext = QString::fromUtf8( data );
-			parseCacowardsWikitext( year, wikitext, refreshEntries_ );
+			const QString html = QString::fromUtf8( data );
+			parseCacowardsHtml( year, html, refreshEntries_ );
 		}
 		// a failed year (404 for a year that doesn't exist, or a blocked request) is simply skipped
 	}
@@ -487,6 +493,178 @@ void CacowardsTab::parseCacowardsWikitext( int year, const QString & wikitext, Q
 	}
 }
 
+void CacowardsTab::parseCacowardsHtml( int year, const QString & html, QList< CacowardEntry > & out ) const
+{
+	static const QRegularExpression headingRe( QStringLiteral("<h([2-4])[^>]*>(.*?)</h\\1>"),
+	                                          QRegularExpression::DotMatchesEverythingOption );
+	static const QRegularExpression liRe( QStringLiteral("<li[^>]*>(.*?)</li>"),
+	                                     QRegularExpression::DotMatchesEverythingOption );
+	static const QRegularExpression idRe( QStringLiteral("idgames[^\"']*[?&]id=(\\d+)") );
+	static const QRegularExpression titleAttrRe( QStringLiteral("<a[^>]*href=\"[^\"]*doomwiki\\.org/wiki/[^\"]*\"[^>]*title=\"([^\"]*)\"") );
+	static const QRegularExpression titleTextRe( QStringLiteral("<a[^>]*href=\"[^\"]*doomwiki\\.org/wiki/[^\"]*\"[^>]*>(.*?)</a>"),
+	                                            QRegularExpression::DotMatchesEverythingOption );
+	static const QRegularExpression tagRe( QStringLiteral("<[^>]+>") );
+
+	// collect award headings (in document order) so each list item can be assigned a category
+	struct Heading { int pos; QString category; };
+	QList< Heading > headings;
+	for (auto it = headingRe.globalMatch( html ); it.hasNext(); )
+	{
+		const auto m = it.next();
+		QString text = m.captured( 2 );
+		text.remove( tagRe );
+		text = text.trimmed();
+		const QString category = classifyCategory( text );
+		if (!category.isEmpty())
+			headings.append( Heading{ int( m.capturedStart() ), category } );
+	}
+
+	for (auto it = liRe.globalMatch( html ); it.hasNext(); )
+	{
+		const auto m = it.next();
+		const int pos = int( m.capturedStart() );
+		const QString content = m.captured( 1 );
+
+		const auto idMatch = idRe.match( content );
+		if (!idMatch.hasMatch())
+			continue;
+
+		QString title;
+		const auto attrMatch = titleAttrRe.match( content );
+		if (attrMatch.hasMatch())
+		{
+			title = attrMatch.captured( 1 ).trimmed();
+		}
+		else
+		{
+			const auto textMatch = titleTextRe.match( content );
+			if (textMatch.hasMatch())
+			{
+				title = textMatch.captured( 1 );
+				title.remove( tagRe );
+				title = title.trimmed();
+			}
+		}
+		if (title.isEmpty())
+			title = QStringLiteral("(unnamed)");
+
+		// the category is the nearest award heading preceding this item
+		QString category;
+		for (const Heading & h : headings)
+		{
+			if (h.pos < pos)
+				category = h.category;
+			else
+				break;
+		}
+		if (category.isEmpty())
+			continue;
+
+		CacowardEntry entry;
+		entry.year = year;
+		entry.category = category;
+		entry.title = title;
+		entry.id = idMatch.captured( 1 ).toInt();
+		out.append( entry );
+	}
+}
+
+void CacowardsTab::parseExportXml( const QByteArray & xml, QList< CacowardEntry > & out ) const
+{
+	QXmlStreamReader reader( xml );
+
+	QString pageTitle;
+	QString pageText;
+
+	while (!reader.atEnd())
+	{
+		switch (reader.readNext())
+		{
+			case QXmlStreamReader::StartElement:
+				if (reader.name().toString() == QLatin1String("title"))
+					pageTitle = reader.readElementText();
+				else if (reader.name().toString() == QLatin1String("text"))
+					pageText = reader.readElementText();
+				break;
+
+			case QXmlStreamReader::EndElement:
+				if (reader.name().toString() == QLatin1String("page"))
+				{
+					if (pageTitle.startsWith( QLatin1String("Cacowards_") ))
+					{
+						bool ok = false;
+						const int year = pageTitle.mid( 10 ).toInt( &ok );  // len("Cacowards_") == 10
+						if (ok)
+							parseCacowardsWikitext( year, pageText, out );
+					}
+					pageTitle.clear();
+					pageText.clear();
+				}
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
+void CacowardsTab::fallbackToBrowserExport()
+{
+	progressBar_->setVisible( false );
+	refreshBtn_->setEnabled( true );
+	importBtn_->setEnabled( true );
+
+	// open doomwiki's Special:Export page in the user's browser with all Cacowards pages pre-listed
+	QStringList pageNames;
+	for (int year = 2004; year <= QDate::currentDate().year(); ++year)
+		pageNames.append( QString( "Cacowards_%1" ).arg( year ) );
+
+	QUrl url( kDoomwikiIndex );
+	QUrlQuery query;
+	query.addQueryItem( "title", "Special:Export" );
+	query.addQueryItem( "pages", pageNames.join( '\n' ) );
+	url.setQuery( query );
+
+	QDesktopServices::openUrl( url );
+
+	setStatus( "Automatic refresh was blocked. A doomwiki export page has been opened in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
+}
+
+void CacowardsTab::importExportedXml()
+{
+	const QString filePath = QFileDialog::getOpenFileName( this, "Import doomwiki export XML", QString(), "XML files (*.xml);;All files (*)" );
+	if (filePath.isEmpty())
+		return;
+
+	QFile file( filePath );
+	if (!file.open( QIODevice::ReadOnly ))
+	{
+		setStatus( "Could not open \"" + filePath + "\"." );
+		return;
+	}
+
+	QList< CacowardEntry > entries;
+	parseExportXml( file.readAll(), entries );
+
+	if (entries.isEmpty())
+	{
+		setStatus( "No Cacowards entries found in \"" + filePath + "\"." );
+		return;
+	}
+
+	refreshEntries_ = entries;
+	refreshResolveIdx_ = 0;
+	refreshResolvedCount_ = 0;
+
+	refreshBtn_->setEnabled( false );
+	importBtn_->setEnabled( false );
+	progressBar_->setVisible( true );
+	progressBar_->setRange( 0, 0 );
+	setStatus( QString( "Resolving %1 entries..." ).arg( entries.size() ) );
+
+	startNextRefreshResolution();
+}
+
 void CacowardsTab::startNextRefreshResolution()
 {
 	// skip entries that couldn't be resolved (they have no download path)
@@ -503,6 +681,7 @@ void CacowardsTab::startNextRefreshResolution()
 
 		progressBar_->setVisible( false );
 		refreshBtn_->setEnabled( true );
+		importBtn_->setEnabled( true );
 		setStatus( QString( "Refreshed %1 Cacowards entries." ).arg( entries_.size() ) );
 		return;
 	}
