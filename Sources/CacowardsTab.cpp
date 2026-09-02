@@ -170,7 +170,10 @@ void CacowardsTab::buildUi()
 	//-- tree + refresh button --------------------------------------------------
 
 	refreshBtn_ = new QPushButton( "Refresh", this );
-	refreshBtn_->setToolTip( "Re-download the Cacowards list from doomwiki.org and save it to disk" );
+	refreshBtn_->setToolTip( "Re-download the Cacowards list automatically (via the Wayback Machine) and save it to disk" );
+
+	generateListBtn_ = new QPushButton( "Generate list", this );
+	generateListBtn_->setToolTip( "Open doomwiki's export page in your browser so you can download the Cacowards XML yourself" );
 
 	importBtn_ = new QPushButton( "Import...", this );
 	importBtn_->setToolTip( "Load the Cacowards list from a doomwiki export XML file you downloaded in your browser" );
@@ -178,6 +181,7 @@ void CacowardsTab::buildUi()
 	QHBoxLayout * refreshRow = new QHBoxLayout;
 	refreshRow->addStretch( 1 );
 	refreshRow->addWidget( refreshBtn_ );
+	refreshRow->addWidget( generateListBtn_ );
 	refreshRow->addWidget( importBtn_ );
 
 	tree_ = new QTreeWidget( this );
@@ -235,6 +239,7 @@ void CacowardsTab::buildUi()
 	//-- signal/slot wiring -----------------------------------------------------
 
 	connect( refreshBtn_, &QPushButton::clicked, this, &CacowardsTab::refresh );
+	connect( generateListBtn_, &QPushButton::clicked, this, &CacowardsTab::generateList );
 	connect( importBtn_, &QPushButton::clicked, this, &CacowardsTab::importExportedXml );
 	connect( tree_, &QTreeWidget::currentItemChanged, this, &CacowardsTab::onCurrentItemChanged );
 	connect( tree_, &QTreeWidget::itemChanged, this, &CacowardsTab::onItemChanged );
@@ -400,7 +405,8 @@ void CacowardsTab::startNextRefreshYear()
 		// all years fetched, now resolve the idgames ids into download paths
 		if (refreshEntries_.isEmpty())
 		{
-			fallbackToBrowserExport();
+			openBrowserExportPage();
+			setStatus( "Automatic refresh was blocked. A doomwiki export page has been opened in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
 			return;
 		}
 		refreshResolveIdx_ = 0;
@@ -608,7 +614,7 @@ void CacowardsTab::parseExportXml( const QByteArray & xml, QList< CacowardEntry 
 	}
 }
 
-void CacowardsTab::fallbackToBrowserExport()
+void CacowardsTab::openBrowserExportPage()
 {
 	progressBar_->setVisible( false );
 	refreshBtn_->setEnabled( true );
@@ -626,8 +632,12 @@ void CacowardsTab::fallbackToBrowserExport()
 	url.setQuery( query );
 
 	QDesktopServices::openUrl( url );
+}
 
-	setStatus( "Automatic refresh was blocked. A doomwiki export page has been opened in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
+void CacowardsTab::generateList()
+{
+	openBrowserExportPage();
+	setStatus( "Opened doomwiki's export page in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
 }
 
 void CacowardsTab::importExportedXml()

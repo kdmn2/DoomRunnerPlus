@@ -83,6 +83,7 @@ class CacowardsTab : public QWidget {
  private slots:
 
 	void refresh();
+	void generateList();
 	void importExportedXml();
 	void onCurrentItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous );
 	void onItemChanged( QTreeWidgetItem * item, int column );
@@ -118,7 +119,7 @@ class CacowardsTab : public QWidget {
 	void parseCacowardsWikitext( int year, const QString & wikitext, QList< CacowardEntry > & out ) const;
 	void parseCacowardsHtml( int year, const QString & html, QList< CacowardEntry > & out ) const;
 	void parseExportXml( const QByteArray & xml, QList< CacowardEntry > & out ) const;
-	void fallbackToBrowserExport();
+	void openBrowserExportPage();
 	void startNextRefreshResolution();
 	void saveDataFile();
 
@@ -149,6 +150,7 @@ class CacowardsTab : public QWidget {
 	QTextEdit * detailsView_ = nullptr;
 	QLineEdit * targetDirLine_ = nullptr;
 	QPushButton * refreshBtn_ = nullptr;
+	QPushButton * generateListBtn_ = nullptr;
 	QPushButton * importBtn_ = nullptr;
 	QPushButton * browseBtn_ = nullptr;
 	QPushButton * downloadBtn_ = nullptr;
