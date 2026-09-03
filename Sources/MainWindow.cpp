@@ -877,8 +877,9 @@ MainWindow::MainWindow()
 
 	this->setWindowTitle( windowTitle() + ' ' + appVersion );
 
- #if IS_FLATPAK_BUILD
-	QGuiApplication::setDesktopFileName("io.github.Youda008.DoomRunner");
+ #if !IS_WINDOWS
+	// associate the app with its desktop entry on Linux (affects Wayland app id and window grouping)
+	QGuiApplication::setDesktopFileName("DoomRunnerPlus");
  #endif
 
  #if !IS_WINDOWS

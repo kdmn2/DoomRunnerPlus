@@ -32,6 +32,7 @@ trap "popd 1>/dev/null; echo" EXIT
 
 DESKTOP_APP_NAME="Doom Runner Plus"
 APP_NAME_UNDERSCORED="${DESKTOP_APP_NAME// /_}"
+DESKTOP_FILE_NAME="DoomRunnerPlus"
 
 function echo_and_eval() {
 	COMMAND="$1"
@@ -170,7 +171,7 @@ elif [ $PACKAGE_TYPE == deb ]; then
 	cp "$EXECUTABLE_PATH" "$STAGING_DIR/usr/bin/"
 
 	# copy desktop file and appdata
-	cp "$SOURCE_DIR/Install/XDG/$PROJECT_NAME.desktop" "$STAGING_DIR/usr/share/applications/"
+	cp "$SOURCE_DIR/Install/XDG/$DESKTOP_FILE_NAME.desktop" "$STAGING_DIR/usr/share/applications/"
 	cp "$SOURCE_DIR/Install/XDG/io.github.Youda008.DoomRunner.appdata.xml" "$STAGING_DIR/usr/share/metainfo/"
 
 	# copy icons
@@ -231,7 +232,7 @@ elif [ $PACKAGE_TYPE == appimage ]; then
 	echo
 	COMMAND="$DEPLOY_TOOL
       --executable \"$EXECUTABLE_PATH\"
-      --desktop-file \"$SOURCE_DIR/Install/XDG/$PROJECT_NAME.desktop\"
+      --desktop-file \"$SOURCE_DIR/Install/XDG/$DESKTOP_FILE_NAME.desktop\"
       --icon-file \"$SOURCE_DIR/Install/XDG/$PROJECT_NAME.128x128.png\"
       --icon-filename $PROJECT_NAME
       --appdir \"$BUILD_DIR/AppDir\"
