@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kdmn2.DoomRunnerPlus</id>
+  <launchable type="desktop-id">DoomRunnerPlus.desktop</launchable>
+  <name>Doom Runner Plus</name>
+  <summary>Preset-oriented graphical launcher of various ported Doom engines (an alternative to ZDL)</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <developer id="io.github.kdmn2">
+    <name>kdmn2</name>
+  </developer>
+  <url type="homepage">https://github.com/kdmn2/DoomRunnerPlus</url>
+  <url type="bugtracker">https://github.com/kdmn2/DoomRunnerPlus/issues</url>
+  <url type="help">https://github.com/kdmn2/DoomRunnerPlus#readme</url>
+  <description>
+    <p>
+      Doom Runner Plus is yet another launcher of common Doom source ports (like GZDoom, Zandronum, PrBoom, ...) with graphical user interface.
+      It is written in C++ and Qt, and it is designed around the idea of presets for various multi-file modifications (Brutal Doom with
+      mutators, Project Brutality with UDV, Complex Doom Clusterfuck, ...) to allow one-click switching between them and minimize any
+      repetitive work.
+    </p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://github.com/kdmn2/DoomRunnerPlus/raw/main/Screenshots/1-InitialSetup.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/kdmn2/DoomRunnerPlus/raw/main/Screenshots/2-MainScreen.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/kdmn2/DoomRunnerPlus/raw/main/Screenshots/3-LaunchOptions.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/kdmn2/DoomRunnerPlus/raw/main/Screenshots/4-DMflags.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/kdmn2/DoomRunnerPlus/raw/main/Screenshots/5-MapPackDesc.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">intense</content_attribute>
+    <content_attribute id="violence-realistic">intense</content_attribute>
+    <content_attribute id="violence-bloodshed">moderate</content_attribute>
+  </content_rating>
+  <releases>
+    <release version="1.0" date="2026-09-03"><url>https://github.com/kdmn2/DoomRunnerPlus/releases/tag/v1.0</url></release>
+  </releases>
+  <provides>
+    <binary>DoomRunner</binary>
+  </provides>
+</component>

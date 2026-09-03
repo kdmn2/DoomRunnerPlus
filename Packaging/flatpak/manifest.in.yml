@@ -1,4 +1,4 @@
-app-id: io.github.Youda008.DoomRunner
+app-id: io.github.kdmn2.DoomRunnerPlus
 runtime: org.kde.Platform
 runtime-version: '6.9'
 sdk: org.kde.Sdk
@@ -43,7 +43,7 @@ modules:
       # Patch desktop file using Flatpak references
       - desktop-file-edit --set-icon=${FLATPAK_ID} Install/XDG/DoomRunnerPlus.desktop
       # Install desktop file and icons
-      - install -Dm 644 Install/XDG/io.github.Youda008.DoomRunner.appdata.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm 644 Install/XDG/io.github.kdmn2.DoomRunnerPlus.appdata.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - install -Dm 644 Install/XDG/DoomRunnerPlus.desktop /app/share/applications/${FLATPAK_ID}.desktop
       - |
         for size in 16 24 32 48 64 128; do

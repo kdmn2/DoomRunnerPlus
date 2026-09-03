@@ -172,7 +172,7 @@ elif [ $PACKAGE_TYPE == deb ]; then
 
 	# copy desktop file and appdata
 	cp "$SOURCE_DIR/Install/XDG/$DESKTOP_FILE_NAME.desktop" "$STAGING_DIR/usr/share/applications/"
-	cp "$SOURCE_DIR/Install/XDG/io.github.Youda008.DoomRunner.appdata.xml" "$STAGING_DIR/usr/share/metainfo/"
+	cp "$SOURCE_DIR/Install/XDG/io.github.kdmn2.DoomRunnerPlus.appdata.xml" "$STAGING_DIR/usr/share/metainfo/"
 
 	# copy icons
 	for SIZE in 16 24 32 48 64 128; do
@@ -309,9 +309,9 @@ elif [ $PACKAGE_TYPE == flatpak ]; then
 
 	# create packages from the new refs in the Flatpak repository
 	echo
-	echo_and_eval "flatpak build-bundle \"$FLATPAK_REPO\" \"$TEMP_PACKAGE_DEST_DIR/$PACKAGE_NAME_APP\" io.github.Youda008.DoomRunner" || exit $((300+$?))
+	echo_and_eval "flatpak build-bundle \"$FLATPAK_REPO\" \"$TEMP_PACKAGE_DEST_DIR/$PACKAGE_NAME_APP\" io.github.kdmn2.DoomRunnerPlus" || exit $((300+$?))
 	echo
-	echo_and_eval "flatpak build-bundle \"$FLATPAK_REPO\" \"$TEMP_PACKAGE_DEST_DIR/$PACKAGE_NAME_DBG\" io.github.Youda008.DoomRunner.Debug --runtime" || exit $((300+$?))
+	echo_and_eval "flatpak build-bundle \"$FLATPAK_REPO\" \"$TEMP_PACKAGE_DEST_DIR/$PACKAGE_NAME_DBG\" io.github.kdmn2.DoomRunnerPlus.Debug --runtime" || exit $((300+$?))
 
 	cp "$TEMP_PACKAGE_DEST_DIR"/*.flatpak "$RELEASE_DIR/"
 
