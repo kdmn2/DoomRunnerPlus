@@ -190,7 +190,9 @@ macx: ICON = Resources/DoomRunner.icns
 
 #-- build type variables -------------------------
 
-DEFINES += PROJECT_NAME=\\\"$$TARGET\\\"
+# The data/config directory name is kept distinct from the binary target name,
+# so that this fork's settings don't clash with the original Doom Runner.
+DEFINES += PROJECT_NAME=\\\"DoomRunnerPlus\\\"
 
 CONFIG(debug, debug|release) {
 	DEFINES += DEBUG
