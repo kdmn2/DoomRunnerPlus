@@ -476,12 +476,14 @@ elif [ $PACKAGE_TYPE == dmg ]; then
 
 	# Setup the background and layout of the mounted DMG image.
 	#cp "$SOURCE_DIR/Packaging/dmg/DS_Store" "$MOUNTED_DMG_VOLUME/.DS_Store"
-	osascript "$SCRIPT_DIR/set_finder_layout.applescript" "$VOLUME_NAME" "$PROJECT_NAME"
+	if [[ -z "${CI:-}" ]]; then
+		osascript "$SCRIPT_DIR/set_finder_layout.applescript" "$VOLUME_NAME" "$PROJECT_NAME"
 
-	echo
-	echo "Now you can make manual changes in the mounted image."
-	echo "When you're finished, press Enter to continue"
-	read
+		echo
+		echo "Now you can make manual changes in the mounted image."
+		echo "When you're finished, press Enter to continue"
+		read
+	fi
 
 	echo_and_eval "hdiutil detach \"$MOUNTED_DMG_VOLUME\"" || exit $((400+$?))
 

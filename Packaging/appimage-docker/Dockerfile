@@ -15,7 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     APPIMAGE_EXTRACT_AND_RUN=1 \
     # The bundled strip in linuxdeploy can't handle Qt's .relr.dyn sections.
     NO_STRIP=1 \
-    PATH="/usr/lib/qt6/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    PATH="/usr/lib/qt6/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/builder/Apps"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential make g++ \
@@ -26,4 +26,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /home/builder/Apps \
     && wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O /home/builder/Apps/linuxdeploy-x86_64.AppImage \
-    && chmod +x /home/builder/Apps/linuxdeploy-x86_64.AppImage
+    && wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O /home/builder/Apps/linuxdeploy-plugin-qt-x86_64.AppImage \
+    && chmod +x /home/builder/Apps/linuxdeploy-x86_64.AppImage /home/builder/Apps/linuxdeploy-plugin-qt-x86_64.AppImage
