@@ -48,7 +48,9 @@ docker run --rm \
 
     mkdir -p squashfs-root/usr/qml
     cp -a /usr/lib/x86_64-linux-gnu/qt6/qml/. squashfs-root/usr/qml/
-    cp /app/DoomRunner/Packaging/appimage-docker/launcher-sd/AppRun squashfs-root/AppRun
+    # AppRun is a symlink to the binary; --remove-destination replaces it with a real script
+    # instead of writing through the symlink and clobbering usr/bin/DoomRunnerSD.
+    cp --remove-destination /app/DoomRunner/Packaging/appimage-docker/launcher-sd/AppRun squashfs-root/AppRun
     chmod +x squashfs-root/AppRun
 
     /home/builder/Apps/appimagetool-x86_64.AppImage --appimage-extract-and-run \
