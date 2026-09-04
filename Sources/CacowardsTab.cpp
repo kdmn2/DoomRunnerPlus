@@ -843,21 +843,30 @@ void CacowardsTab::importExportedXml()
 		return;
 	}
 
-	logMessage( QString( "Imported %1 entries from \"%2\"; resolving download paths..." ).arg( entries.size() ).arg( filePath ) );
+	logMessage( QString( "Imported %1 entries from \"%2\"." ).arg( entries.size() ).arg( filePath ) );
 
+	// Don't contact the /idgames API to resolve/download paths while importing: take the
+	// paths the XML carries directly (file= references). Entries referenced only by an
+	// id= are imported as-is (listed, but with no path until the API is reachable).
 	refreshEntries_ = entries;
-	refreshResolveIdx_ = 0;
-	refreshResolvedCount_ = 0;
-	refreshNetworkSteps_ = 0;
-	refreshTimer_.start();
+	entries_ = entries;
+	saveDataFile();
+	buildTree();
+	emit expansionChanged();
 
-	refreshBtn_->setEnabled( false );
-	importBtn_->setEnabled( false );
-	progressBar_->setVisible( true );
-	progressBar_->setRange( 0, 0 );
-	setStatus( QString( "Resolving %1 entries..." ).arg( entries.size() ) );
+	refreshBtn_->setEnabled( true );
+	importBtn_->setEnabled( true );
+	progressBar_->setVisible( false );
 
-	startNextRefreshResolution();
+	int withPath = 0;
+	for (const CacowardEntry & entry : entries)
+		if (!entry.dir.isEmpty() && !entry.filename.isEmpty())
+			++withPath;
+	const int idOnly = entries.size() - withPath;
+
+	setStatus( QString( "Imported %1 Cacowards entries (%2 with a download path, %3 by /idgames id). The list is cached, so you don't need to import again." ).arg( entries.size() ).arg( withPath ).arg( idOnly ) );
+	if (idOnly > 0)
+		logMessage( QString( "%1 entries carry only an /idgames id and were left without a path (no network check was performed)." ).arg( idOnly ) );
 }
 
 void CacowardsTab::startNextRefreshResolution()
