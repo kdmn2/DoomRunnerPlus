@@ -1293,6 +1293,7 @@ void CacowardsTab::startDownload( ActiveDownload * download )
 		request.setRawHeader( "User-Agent", kUserAgent );
 		request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
 
+		logMessage( QString( "Resolving /idgames id %1 via %2" ).arg( download->resolveId ).arg( url.toString() ) );
 		download->resolveReply = network_->get( request );
 		connect( download->resolveReply, &QNetworkReply::finished, this, [ this, download ]()
 		{
@@ -1309,6 +1310,12 @@ void CacowardsTab::startDownload( ActiveDownload * download )
 	QNetworkRequest request{ QUrl( url ) };
 	request.setRawHeader( "User-Agent", kUserAgent );
 	request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
+
+	logMessage( QString( "Downloading \"%1\" [%2/%3] via %4" )
+		.arg( QFileInfo( download->path ).fileName() )
+		.arg( download->urlIdx + 1 )
+		.arg( download->urls.size() )
+		.arg( url ) );
 
 	// make sure the parent directory exists (it may be a nested autosort subfolder)
 	QDir().mkpath( QFileInfo( download->path ).absolutePath() );
@@ -1446,7 +1453,9 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 
 	if (success)
 	{
-		logMessage( QString( "Downloaded \"%1\" (%2 bytes)." ).arg( savedPath ).arg( QFileInfo( savedPath ).size() ) );
+		logMessage( QString( "Downloaded \"%1\" (%2 bytes) from %3" )
+			.arg( savedPath ).arg( QFileInfo( savedPath ).size() )
+			.arg( download->urls.value( download->urlIdx - 1 ) ) );
 
 		if (unpackChk_->isChecked())
 		{
@@ -1502,13 +1511,20 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 		if (download->urlIdx < download->urls.size())
 		{
 			setStatus( "Mirror failed (" + errorString + "), trying the next one ..." );
-			logMessage( QString( "Mirror failed for \"%1\" (%2); trying the next mirror." ).arg( QFileInfo( savedPath ).fileName() ).arg( errorString ) );
+			logMessage( QString( "Mirror failed for \"%1\" at %2 (%3); trying the next mirror." )
+				.arg( QFileInfo( savedPath ).fileName() )
+				.arg( download->urls.value( download->urlIdx ) )
+				.arg( errorString ) );
 			startDownload( download );
 			return;
 		}
 
 		setStatus( "Download failed: " + errorString );
-		logMessage( QString( "Failed to download \"%1\": %2" ).arg( QFileInfo( savedPath ).fileName() ).arg( errorString ) );
+		logMessage( QString( "Failed to download \"%1\": %2 (last URL: %3) - all %4 mirror(s) failed." )
+			.arg( QFileInfo( savedPath ).fileName() )
+			.arg( errorString )
+			.arg( download->urls.value( download->urlIdx ) )
+			.arg( download->urls.size() ) );
 	}
 
 	updateDownloadProgress();

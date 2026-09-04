@@ -229,6 +229,15 @@ elif [ $PACKAGE_TYPE == appimage ]; then
 	[ -d "AppDir" ] && rm -r "AppDir"
 	mkdir -p "AppDir"
 
+	# linuxdeploy bundles libcrypto but not libssl (Qt dlopens the SSL backend at runtime), which
+	# leaves the AppImage with a mismatched OpenSSL pair (bundled libcrypto vs the target's libssl)
+	# -> the Qt TLS backend fails to initialize ("TLS initialization failed"). Copy the matching
+	# libssl3 so the bundled OpenSSL is consistent on the target system.
+	mkdir -p "AppDir/usr/lib"
+	if [ -f "/usr/lib/x86_64-linux-gnu/libssl.so.3" ]; then
+		cp "/usr/lib/x86_64-linux-gnu/libssl.so.3" "AppDir/usr/lib/"
+	fi
+
 	echo
 	COMMAND="$DEPLOY_TOOL
       --executable \"$EXECUTABLE_PATH\"
