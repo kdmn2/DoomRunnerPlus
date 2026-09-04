@@ -160,6 +160,7 @@ class TopWadsTab : public QWidget {
 
 	void buildUi();
 	void loadData();
+	bool loadDataFromJson( const QByteArray & json );
 	void parseExportXml( const QByteArray & xml );
 	void parseSourceWikitext( const TopListSource & src, const QString & wikitext );
 	void startNextRefresh();

@@ -346,6 +346,33 @@ void TopWadsTab::buildUi()
 
 //----------------------------------------------------------------------------------------------------------------------
 
+bool TopWadsTab::loadDataFromJson( const QByteArray & json )
+{
+	QJsonParseError parseError;
+	const QJsonDocument doc = QJsonDocument::fromJson( json, &parseError );
+	if (parseError.error != QJsonParseError::NoError || !doc.isArray())
+		return false;
+
+	entries_.clear();
+	const QJsonArray arr = doc.array();
+	for (const QJsonValue & value : arr)
+	{
+		const QJsonObject obj = value.toObject();
+
+		TopWadEntry entry;
+		entry.umbrella = obj.value( "umbrella" ).toString();
+		entry.subgroup = obj.value( "subgroup" ).toString();
+		entry.title    = obj.value( "title" ).toString();
+		entry.id       = obj.value( "id" ).toInt();
+		entry.dir      = obj.value( "dir" ).toString();
+		entry.filename = obj.value( "filename" ).toString();
+
+		entries_.append( entry );
+	}
+
+	return true;
+}
+
 void TopWadsTab::loadData()
 {
 	QByteArray json;
@@ -371,7 +398,7 @@ void TopWadsTab::loadData()
 	}
 
 	entries_.clear();
-	parseExportXml( json );
+	loadDataFromJson( json );
 	buildTree( /*restoreExpansion*/ true );
 	setStatus( QString( "Loaded %1 entries (%2)." ).arg( entries_.size() ).arg( sourceDesc ) );
 	logMessage( QString( "Loaded %1 entries from %2." ).arg( entries_.size() ).arg( sourceDesc ) );
