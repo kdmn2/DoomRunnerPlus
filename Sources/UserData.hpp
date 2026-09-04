@@ -333,6 +333,7 @@ struct GlobalOptions
 	QString cmdArgs;
 	QString cmdPrefix;
 	EnvVars envVars;
+	bool engineRefreshAsked = false;   ///< one-time prompt: "refresh engine props" was already shown
 
 	QJsonObject serialize() const;
 	void deserialize( const JsonObjectCtx & optsJs );

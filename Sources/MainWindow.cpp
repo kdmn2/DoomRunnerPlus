@@ -1932,10 +1932,13 @@ void MainWindow::restoreLoadedOptions( OptionsToLoad && opts )
 
 		// The previous versions auto-detected some engine info incorrectly and now it's persistently stored
 		// inside the user's options. Ask him, if he wants to to re-detect all the previously auto-detected info.
+		// Ask only once - remember the answer so it doesn't pop up on every launch.
 		bool refreshAllAutoEngineInfo = false;
-		if (opts.version < Version{1,9})
+		if (!opts.globalOpts.engineRefreshAsked && opts.version < Version{1,9})
 		{
 			refreshAllAutoEngineInfo = askForEngineInfoRefresh() == QMessageBox::Yes;
+			opts.globalOpts.engineRefreshAsked = true;
+			scheduleSavingOptions( true );
 		}
 
 		engineModel.startCompleteUpdate();

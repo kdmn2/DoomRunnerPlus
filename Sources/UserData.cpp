@@ -560,6 +560,7 @@ QJsonObject GlobalOptions::serialize() const
 	optsJs["additional_args"] = opts.cmdArgs;
 	optsJs["cmd_prefix"] = opts.cmdPrefix;
 	optsJs["env_vars"] = ::serialize( opts.envVars );
+	optsJs["engine_refresh_asked"] = opts.engineRefreshAsked;
 
 	return optsJs;
 }
@@ -590,6 +591,7 @@ void GlobalOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.cmdPrefix = optsJs.getString( "cmd_prefix" );
 	if (JsonObjectCtx jsEnvVars = optsJs.getObject( "env_vars" ))
 		::deserialize( jsEnvVars, opts.envVars );
+	opts.engineRefreshAsked = optsJs.getBool( "engine_refresh_asked", opts.engineRefreshAsked );
 }
 
 
