@@ -23,6 +23,8 @@ class QComboBox;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
+class QPlainTextEdit;
+class QCheckBox;
 class QLabel;
 class QProgressBar;
 class QNetworkAccessManager;
@@ -54,6 +56,9 @@ class IdgamesTab : public QWidget {
 	/// Sets the directory used as the source of map packs (used as a fallback download target suggestion).
 	void setMapSourceDir( const QString & dir );
 
+	/// Shows/hides the activity log. Shared across the download tabs via MainWindow.
+	void setLogVisible( bool visible );
+
  signals:
 
 	/// Emitted after a file has been successfully downloaded and saved to disk.
@@ -61,6 +66,9 @@ class IdgamesTab : public QWidget {
 
 	/// Emitted when the user changes the download target directory.
 	void targetDirChanged( const QString & dir );
+
+	/// Emitted when the user shows/hides the activity log (propagated to the other download tabs).
+	void logVisibilityChanged( bool enabled );
 
  private slots:
 
@@ -111,6 +119,7 @@ class IdgamesTab : public QWidget {
 	void populateResults( const QList< RemoteWadEntry > & entries );
 	void showDetails( int row );
 	void setStatus( const QString & text );
+	void logMessage( const QString & message );
 	QString sanitizeFileName( const QString & fileName ) const;
 	bool ensureTargetDirUsable();
 	bool askToUseMapDir( const QString & targetDir );
@@ -150,6 +159,9 @@ class IdgamesTab : public QWidget {
 	QPushButton * downloadBtn_ = nullptr;
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
+	QCheckBox * logChk_ = nullptr;          ///< toggles visibility of the activity log
+	QPlainTextEdit * logView_ = nullptr;    ///< scrollable activity log (hidden by default)
+	bool settingLogVisible_ = false;       ///< guards against re-emitting logVisibilityChanged while setting programmatically
 
 };
 

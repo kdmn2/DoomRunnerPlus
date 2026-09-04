@@ -218,6 +218,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void applyCacowardsSettings();
 	void applyIdgamesSettings();
 	void applyTopWadsSettings();
+	void applyDownloaderLogSettings();
 
 	void loadMonitorInfo( QComboBox * box );
 

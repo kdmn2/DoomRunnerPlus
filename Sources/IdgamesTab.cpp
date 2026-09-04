@@ -15,8 +15,12 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTextEdit>
+#include <QPlainTextEdit>
+#include <QScrollBar>
+#include <QCheckBox>
 #include <QLabel>
 #include <QProgressBar>
+#include <QDateTime>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -107,6 +111,14 @@ void IdgamesTab::setMapSourceDir( const QString & dir )
 	mapSourceDir_ = dir;
 }
 
+void IdgamesTab::setLogVisible( bool visible )
+{
+	settingLogVisible_ = true;
+	logChk_->setChecked( visible );
+	logView_->setVisible( visible );
+	settingLogVisible_ = false;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 void IdgamesTab::buildUi()
@@ -193,6 +205,21 @@ void IdgamesTab::buildUi()
 	downloadRow->addSpacing( 10 );
 	downloadRow->addWidget( downloadBtn_ );
 
+	//-- activity log -----------------------------------------------------------
+
+	logChk_ = new QCheckBox( "Show log", this );
+	logChk_->setToolTip( "Show a log of searches, downloads and extraction events" );
+
+	logView_ = new QPlainTextEdit( this );
+	logView_->setReadOnly( true );
+	logView_->setPlaceholderText( "No activity logged yet." );
+	logView_->setMinimumHeight( 120 );
+	logView_->setVisible( false );
+
+	QHBoxLayout * logRow = new QHBoxLayout;
+	logRow->addStretch( 1 );
+	logRow->addWidget( logChk_ );
+
 	//-- status bar -------------------------------------------------------------
 
 	statusLabel_ = new QLabel( "Enter a search query or click \"Show All\".", this );
@@ -208,6 +235,8 @@ void IdgamesTab::buildUi()
 	mainLayout->addLayout( searchRow );
 	mainLayout->addWidget( resultsPanel, 1 );
 	mainLayout->addLayout( downloadRow );
+	mainLayout->addLayout( logRow );
+	mainLayout->addWidget( logView_ );
 	mainLayout->addWidget( progressBar_ );
 	mainLayout->addWidget( statusLabel_ );
 
@@ -220,6 +249,13 @@ void IdgamesTab::buildUi()
 	connect( resultsTable_, &QTableWidget::itemChanged, this, &IdgamesTab::onItemChanged );
 	connect( browseBtn_, &QPushButton::clicked, this, &IdgamesTab::browseTargetDir );
 	connect( downloadBtn_, &QPushButton::clicked, this, &IdgamesTab::downloadChecked );
+	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		if (settingLogVisible_)
+			return;
+		logView_->setVisible( checked );
+		emit logVisibilityChanged( checked );
+	});
 
 	// save the target directory as soon as the user changes it
 	connect( targetDirLine_, &QLineEdit::textChanged, this, [ this ]( const QString & text )
@@ -376,9 +412,15 @@ void IdgamesTab::onSearchFinished()
 	populateResults( entries );
 
 	if (entries.isEmpty())
+	{
 		setStatus( warning.isEmpty() ? "No results found." : warning );
+		logMessage( warning.isEmpty() ? "No results found." : warning );
+	}
 	else
+	{
 		setStatus( QString( "Found %1 result(s)." ).arg( entries.size() ) );
+		logMessage( QString( "Found %1 result(s)." ).arg( entries.size() ) );
+	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -541,8 +583,11 @@ void IdgamesTab::downloadChecked()
 	if (pendingDownloads_.isEmpty())
 	{
 		setStatus( "Nothing to download (all selected files already exist)." );
+		logMessage( "Nothing to download - all selected files already exist." );
 		return;
 	}
+
+	logMessage( QString( "Starting download of %1 file(s) to \"%2\"." ).arg( pendingDownloads_.size() ).arg( targetDir() ) );
 
 	batchActive_ = true;
 	downloadCount_ = pendingDownloads_.size();
@@ -634,6 +679,12 @@ void IdgamesTab::startDownload( const QString & filePath )
 		.arg( batchInfo )
 		.arg( downloadUrlIdx_ + 1 )
 		.arg( downloadUrls_.size() ) );
+	logMessage( QString( "Downloading \"%1\"%2 (mirror %3/%4) via %5" )
+		.arg( QFileInfo( filePath ).fileName() )
+		.arg( batchInfo )
+		.arg( downloadUrlIdx_ + 1 )
+		.arg( downloadUrls_.size() )
+		.arg( url ) );
 }
 
 void IdgamesTab::onDownloadFinished()
@@ -669,6 +720,7 @@ void IdgamesTab::onDownloadFinished()
 	if (success)
 	{
 		setStatus( "Downloaded to \"" + savedPath + "\"." );
+		logMessage( "Downloaded to \"" + savedPath + "\"." );
 		emit downloadFinished( savedPath );
 		startNextDownload();
 		return;
@@ -683,11 +735,13 @@ void IdgamesTab::onDownloadFinished()
 	if (downloadUrlIdx_ < downloadUrls_.size())
 	{
 		setStatus( "Mirror failed (" + errorString + "), trying the next one ..." );
+		logMessage( "Mirror failed for \"" + savedPath + "\" (" + errorString + "); trying the next mirror." );
 		startDownload( savedPath );
 		return;
 	}
 
 	setStatus( "Download failed: " + errorString );
+	logMessage( "Failed to download \"" + savedPath + "\": " + errorString );
 	startNextDownload();
 }
 
@@ -778,4 +832,13 @@ bool IdgamesTab::askToUseMapDir( const QString & targetDir )
 void IdgamesTab::setStatus( const QString & text )
 {
 	statusLabel_->setText( text );
+}
+
+void IdgamesTab::logMessage( const QString & message )
+{
+	logView_->appendPlainText( QString( "[%1] %2" )
+		.arg( QDateTime::currentDateTime().toString( "HH:mm:ss" ) )
+		.arg( message ) );
+	if (QScrollBar * bar = logView_->verticalScrollBar())
+		bar->setValue( bar->maximum() );
 }

@@ -385,6 +385,7 @@ struct ModSettings
 	QStringList cacowardsExpandedNodes;      ///< Cacowards tree nodes that were expanded (paths like "2004"/"2004/Winners")
 	QString topWadsDownloadDir;              ///< directory where WADs from the "top lists" are saved
 	QStringList topWadsExpandedNodes;        ///< top-lists tree nodes that were expanded
+	bool showActivityLog = false;            ///< whether the activity log is shown in the download tabs
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;

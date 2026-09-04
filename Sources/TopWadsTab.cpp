@@ -184,6 +184,14 @@ bool TopWadsTab::parallelDownload() const { return maxParallel_ > 1; }
 
 void TopWadsTab::setMapSourceDir( const QString & dir ) { mapSourceDir_ = dir; }
 
+void TopWadsTab::setLogVisible( bool visible )
+{
+	settingLogVisible_ = true;
+	logChk_->setChecked( visible );
+	logView_->setVisible( visible );
+	settingLogVisible_ = false;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 void TopWadsTab::buildUi()
@@ -329,7 +337,10 @@ void TopWadsTab::buildUi()
 	});
 	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
 	{
+		if (settingLogVisible_)
+			return;
 		logView_->setVisible( checked );
+		emit logVisibilityChanged( checked );
 	});
 }
 

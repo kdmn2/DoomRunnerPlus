@@ -1001,6 +1001,19 @@ MainWindow::MainWindow()
 		scheduleSavingOptions();
 	});
 
+	// the activity-log toggle is shared across all download tabs: toggling one updates them all
+	const auto syncDownloaderLog = [ this ]( bool visible )
+	{
+		modSettings.showActivityLog = visible;
+		scheduleSavingOptions( true );
+		idgamesTab->setLogVisible( visible );
+		cacowardsTab->setLogVisible( visible );
+		topWadsTab->setLogVisible( visible );
+	};
+	connect( idgamesTab, &IdgamesTab::logVisibilityChanged, this, syncDownloaderLog );
+	connect( cacowardsTab, &CacowardsTab::logVisibilityChanged, this, syncDownloaderLog );
+	connect( topWadsTab, &TopWadsTab::logVisibilityChanged, this, syncDownloaderLog );
+
 	// group all download tabs under the top-level "WAD Downloader" tab
 	int downloadTabIdx = ui->tabWidget->addTab( downloaderTabs, "WAD Downloader" );
 	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive, the Cacowards and the top-list articles" );
@@ -1449,6 +1462,14 @@ void MainWindow::applyTopWadsSettings()
 	topWadsTab->setTargetDir( !modSettings.topWadsDownloadDir.isEmpty() ? modSettings.topWadsDownloadDir : modSettings.cacowardsDownloadDir );
 	topWadsTab->setExpandedNodes( modSettings.topWadsExpandedNodes );
 	topWadsTab->setMapSourceDir( mapSettings.dir );
+}
+
+void MainWindow::applyDownloaderLogSettings()
+{
+	const bool show = modSettings.showActivityLog;
+	idgamesTab->setLogVisible( show );
+	cacowardsTab->setLogVisible( show );
+	topWadsTab->setLogVisible( show );
 }
 
 void MainWindow::loadMonitorInfo( QComboBox * box )
@@ -2073,6 +2094,7 @@ void MainWindow::restoreLoadedOptions( OptionsToLoad && opts )
 	applyCacowardsSettings();
 	applyIdgamesSettings();
 	applyTopWadsSettings();
+	applyDownloaderLogSettings();
 
 	restoringOptionsInProgress = false;
 

@@ -237,6 +237,14 @@ void CacowardsTab::setMapSourceDir( const QString & dir )
 	mapSourceDir_ = dir;
 }
 
+void CacowardsTab::setLogVisible( bool visible )
+{
+	settingLogVisible_ = true;
+	logChk_->setChecked( visible );
+	logView_->setVisible( visible );
+	settingLogVisible_ = false;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 void CacowardsTab::buildUi()
@@ -386,7 +394,10 @@ void CacowardsTab::buildUi()
 
 	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
 	{
+		if (settingLogVisible_)
+			return;
 		logView_->setVisible( checked );
+		emit logVisibilityChanged( checked );
 	});
 }
 
