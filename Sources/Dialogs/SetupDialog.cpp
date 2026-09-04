@@ -365,7 +365,9 @@ void SetupDialog::engineAutoDetect()
 	auto * listWidget = new QListWidget;
 	for (const QString & path : foundPaths)
 	{
-		auto * item = new QListWidgetItem( fs::getFileNameFromPath( path ) );
+		// show the app name and its full path, so the user can tell them apart
+		// (e.g. a Flatpak vs a binary vs an AppImage)
+		auto * item = new QListWidgetItem( fs::getFileNameFromPath( path ) + "\n" + path );
 		item->setData( Qt::UserRole, path );
 		item->setToolTip( path );
 		item->setFlags( item->flags() | Qt::ItemIsUserCheckable );

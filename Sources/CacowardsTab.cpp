@@ -1078,13 +1078,6 @@ void CacowardsTab::updateDownloadBtnState()
 
 void CacowardsTab::downloadChecked()
 {
-	const QString dir = targetDir();
-	if (dir.isEmpty())
-	{
-		setStatus( "Choose a target directory first." );
-		return;
-	}
-
 	if (!ensureTargetDirUsable())
 		return;  // a message has been shown, and possibly the target dir was switched to the map dir
 
@@ -1364,31 +1357,57 @@ QString CacowardsTab::sanitizeFileName( const QString & fileName ) const
 
 bool CacowardsTab::ensureTargetDirUsable()
 {
-	const QString dir = targetDir();
+	QString dir = targetDir();
+
+	// Offer the community map directory as an alternative whenever the current target
+	// is empty, does not exist, or is not writable.
+	if (dir.isEmpty() || !QFileInfo::exists( dir ) || !fs::isDirectoryWritable( dir ))
+	{
+		if (askToUseMapDir( dir ))
+			return true;  // targetDirLine_ now points to the map directory
+
+		dir = targetDir();  // the user declined the suggestion, re-read the (unchanged) target
+	}
+
 	if (dir.isEmpty())
+	{
+		setStatus( "Choose a target directory first." );
 		return false;
+	}
 
 	// create it if it doesn't exist yet
 	if (!QFileInfo::exists( dir ))
 	{
 		if (!QDir().mkpath( dir ))
-			return askToUseMapDir( dir );
+		{
+			QMessageBox::warning( this, "Target directory not usable",
+				"Target directory \"" + dir + "\" is not accessible for writing.\nPlease choose another directory." );
+			return false;
+		}
 	}
 
 	// it must also be writable for the downloaded files to be saved into it
 	if (!fs::isDirectoryWritable( dir ))
-		return askToUseMapDir( dir );
+	{
+		QMessageBox::warning( this, "Target directory not usable",
+			"Target directory \"" + dir + "\" is not accessible for writing.\nPlease choose another directory." );
+		return false;
+	}
 
 	return true;
 }
 
 bool CacowardsTab::askToUseMapDir( const QString & targetDir )
 {
+	// Only ever suggest the map directory if it actually exists and is writable.
 	if (!mapSourceDir_.isEmpty() && QFileInfo::exists( mapSourceDir_ ) && fs::isDirectoryWritable( mapSourceDir_ ))
 	{
+		const QString targetDesc = targetDir.isEmpty()
+			? "The target directory"
+			: "Target directory \"" + targetDir + "\"";
 		const auto answer = QMessageBox::question(
 			this, "Target directory not usable",
-			"Target directory \"" + targetDir + "\" is not accessible for writing.\n\n"
+			targetDesc + " is empty, does not exist, or is not writable.\n\n"
 			"Use your map directory \"" + mapSourceDir_ + "\" as the download target instead?",
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
 		);
@@ -1397,12 +1416,8 @@ bool CacowardsTab::askToUseMapDir( const QString & targetDir )
 			targetDirLine_->setText( mapSourceDir_ );  // also re-saves the target dir preference
 			return true;
 		}
-		return false;
 	}
 
-	QMessageBox::warning( this, "Target directory not usable",
-		"Target directory \"" + targetDir + "\" is not accessible for writing.\n"
-		"Please choose another directory." );
 	return false;
 }
 
