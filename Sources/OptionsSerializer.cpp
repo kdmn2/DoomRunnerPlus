@@ -279,7 +279,10 @@ static void deserialize( const JsonObjectCtx & rootJs, OptionsToLoad & opts )
 		}
 
 		// Until 1.9.2 the engineSettings.defaultEngine contained engine.executablePath, but we need it to be engine.id.
-		if (!opts.engineSettings.defaultEngine.isEmpty() && opts.version < Version{1,9,2})
+		// Only migrate if the stored value actually looks like a path; if it already is an id, leave it alone.
+		const QString & defaultEngine = opts.engineSettings.defaultEngine;
+		if (!defaultEngine.isEmpty() && opts.version < Version{1,9,2}
+			&& (defaultEngine.contains('/') || defaultEngine.contains('\\') || QFileInfo::exists( defaultEngine )))
 		{
 			int engineIdx = findSuch( opts.engines, [ &opts ]( const EngineInfo & engine )
 													{ return engine.executablePath == opts.engineSettings.defaultEngine; } );
@@ -386,7 +389,9 @@ static void deserialize( const JsonObjectCtx & rootJs, OptionsToLoad & opts )
 			deserialize( preset, presetJs, opts.settings );
 
 			// Until 1.9.2 the preset.selectedEngine contained engine.executablePath, but we need it to be engine.id.
-			if (!preset.isSeparator && !preset.selectedEngine.isEmpty() && opts.version < Version{1,9,2})
+			// Only migrate if the stored value actually looks like a path; if it already is an id, leave it alone.
+			if (!preset.isSeparator && !preset.selectedEngine.isEmpty() && opts.version < Version{1,9,2}
+				&& (preset.selectedEngine.contains('/') || preset.selectedEngine.contains('\\') || QFileInfo::exists( preset.selectedEngine )))
 			{
 				int engineIdx = findSuch( opts.engines, [ &preset ]( const EngineInfo & engine )
 				                                        { return engine.executablePath == preset.selectedEngine; } );
