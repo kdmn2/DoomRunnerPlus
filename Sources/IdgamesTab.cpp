@@ -378,7 +378,7 @@ void IdgamesTab::buildUi()
 				return sortOrder_ == Qt::AscendingOrder ? less : !less;
 			} );
 
-		populateResults( results_ );
+		populateResults( results_, /*resizeColumns*/ false );
 
 		// restore the checked entries in their new positions
 		for (int row = 0; row < results_.size(); ++row)
@@ -530,7 +530,7 @@ void IdgamesTab::onSearchFinished()
 
 //----------------------------------------------------------------------------------------------------------------------
 
-void IdgamesTab::populateResults( const QList< RemoteWadEntry > & entries )
+void IdgamesTab::populateResults( const QList< RemoteWadEntry > & entries, bool resizeColumns )
 {
 	results_ = entries;
 
@@ -561,9 +561,12 @@ void IdgamesTab::populateResults( const QList< RemoteWadEntry > & entries )
 		resultsTable_->setItem( row, 7, new QTableWidgetItem( ageText.isEmpty() ? "—" : ageText ) );
 	}
 
-	resultsTable_->resizeColumnsToContents();
-	resultsTable_->horizontalHeader()->setSectionResizeMode( 0, QHeaderView::ResizeToContents );
-	resultsTable_->horizontalHeader()->setSectionResizeMode( 1, QHeaderView::Stretch );
+	if (resizeColumns)
+	{
+		resultsTable_->resizeColumnsToContents();
+		resultsTable_->horizontalHeader()->setSectionResizeMode( 0, QHeaderView::ResizeToContents );
+		resultsTable_->horizontalHeader()->setSectionResizeMode( 1, QHeaderView::Stretch );
+	}
 
 	updateDownloadBtnState();
 }

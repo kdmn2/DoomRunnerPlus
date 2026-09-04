@@ -154,7 +154,7 @@ class IdgamesTab : public QWidget {
 	};
 
 	void buildUi();
-	void populateResults( const QList< RemoteWadEntry > & entries );
+	void populateResults( const QList< RemoteWadEntry > & entries, bool resizeColumns = true );
 	void showDetails( int row );
 	void setStatus( const QString & text );
 	void logMessage( const QString & message );
