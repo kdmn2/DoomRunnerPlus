@@ -7,7 +7,7 @@
 TARGET = DoomRunner
 
 TEMPLATE = app
-QT += core gui widgets network
+QT += core gui widgets network concurrent
 CONFIG -= qml_debug
 
 

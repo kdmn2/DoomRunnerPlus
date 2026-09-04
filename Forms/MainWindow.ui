@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>DoomRunner</string>
+   <string>DoomRunner Plus</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -249,7 +249,7 @@
                <item>
                 <widget class="QToolButton" name="engineDirBtn">
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open the engine's data directory in a file explorer.&lt;/p&gt;&lt;p&gt;For portable engines, this is the installation directory.&lt;br/&gt;For GZDoom 4.9.0 or later, it's at %Saved Games%\GZDoom&lt;br/&gt;On Linux, this is somewhere in your home, usually ~/.config or ~/.local/share.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>Open the Initial Setup dialog, where you can add and configure your Doom engines.</string>
                  </property>
                  <property name="icon">
                   <iconset resource="../Resources/Resources.qrc">
@@ -541,6 +541,29 @@
                    </property>
                   </widget>
                  </item>
+                 <item>
+                  <widget class="QToolButton" name="modBtnUncheckAll">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>26</width>
+                     <height>26</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>Uncheck all mods</string>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../Resources/Resources.qrc">
+                     <normaloff>:/Uncheck.png</normaloff>:/Uncheck.png</iconset>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </item>
               </layout>
@@ -570,6 +593,16 @@
           </item>
           <item>
            <widget class="QLineEdit" name="presetCmdArgsLine"/>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="gamescopeChkBox">
+            <property name="toolTip">
+             <string>Run this preset's engine in a gamescope fullscreen instance (useful on Steam Deck / handhelds where games launched from a launcher open an invisible window).</string>
+            </property>
+            <property name="text">
+             <string>Run in gamescope</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>

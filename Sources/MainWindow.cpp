@@ -48,6 +48,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QShortcut>
 #include <QTimer>
 #include <QProcess>  // startDetached
@@ -928,7 +929,7 @@ MainWindow::MainWindow()
 	// setup the /idgames download tab
 
 	idgamesTab = new IdgamesTab( this );
-	idgamesTab->setTargetDir( !modSettings.idgamesDownloadDir.isEmpty() ? modSettings.idgamesDownloadDir : modSettings.lastUsedDir );
+	applyIdgamesSettings();
 	int idgamesTabIdx = ui->tabWidget->addTab( idgamesTab, "IdGames" );
 	ui->tabWidget->setTabToolTip( idgamesTabIdx, "Browse and download WADs/ZIPs from the Doomworld /idgames archive" );
 	connect( idgamesTab, &IdgamesTab::downloadFinished, this, &ThisClass::addDownloadedMod );
@@ -941,13 +942,10 @@ MainWindow::MainWindow()
 	// setup the Cacowards tab
 
 	cacowardsTab = new CacowardsTab( this );
-	cacowardsTab->setTargetDir( !modSettings.cacowardsDownloadDir.isEmpty() ? modSettings.cacowardsDownloadDir : modSettings.idgamesDownloadDir );
-	cacowardsTab->setAutosort( modSettings.cacowardsAutosort );
-	cacowardsTab->setUnpack( modSettings.cacowardsUnpack );
-	cacowardsTab->setDeleteAfterExtract( modSettings.cacowardsDeleteAfterExtract );
+	applyCacowardsSettings();
 	int cacowardsTabIdx = ui->tabWidget->addTab( cacowardsTab, "Cacowards" );
 	ui->tabWidget->setTabToolTip( cacowardsTabIdx, "Browse and download Cacowards-awarded WADs from /idgames" );
-	connect( cacowardsTab, &CacowardsTab::downloadFinished, this, &ThisClass::addDownloadedMod );
+	// Cacowards downloads should NOT automatically add the file to the mod list.
 	connect( cacowardsTab, &CacowardsTab::targetDirChanged, this, [ this ]( const QString & dir )
 	{
 		modSettings.cacowardsDownloadDir = dir;
@@ -966,6 +964,16 @@ MainWindow::MainWindow()
 	connect( cacowardsTab, &CacowardsTab::deleteAfterExtractChanged, this, [ this ]( bool enabled )
 	{
 		modSettings.cacowardsDeleteAfterExtract = enabled;
+		scheduleSavingOptions();
+	});
+	connect( cacowardsTab, &CacowardsTab::expansionChanged, this, [ this ]()
+	{
+		modSettings.cacowardsExpandedNodes = cacowardsTab->expandedNodes();
+		scheduleSavingOptions();
+	});
+	connect( cacowardsTab, &CacowardsTab::parallelDownloadChanged, this, [ this ]( bool enabled )
+	{
+		modSettings.cacowardsParallel = enabled;
 		scheduleSavingOptions();
 	});
 
@@ -1074,6 +1082,7 @@ MainWindow::MainWindow()
 	connect( ui->presetCmdArgsLine, &QLineEdit::textChanged, this, &ThisClass::onPresetCmdArgsChanged );
 	connect( ui->globalCmdArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGlobalCmdArgsChanged );
 	connect( ui->cmdPrefixLine, &QLineEdit::textChanged, this, &ThisClass::onCmdPrefixChanged );
+	connect( ui->gamescopeChkBox, &QCheckBox::toggled, this, &ThisClass::onGamescopeToggled );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
 }
 
@@ -1203,12 +1212,14 @@ void MainWindow::setupMapPackList()
 	ui->mapDirView->addStandardMenuActions( ExtendedListView::MenuAction::OpenFileLocation );
 	ui->mapDirView->addMenuSeparator();
 	ui->mapDirView->addStandardMenuActions( ExtendedListView::MenuAction::Copy );
+	refreshMapDirAction = ui->mapDirView->addCustomMenuAction( "Refresh", {} );
 	ui->mapDirView->addMenuSeparator();
 	ui->mapDirView->addStandardMenuActions( ExtendedListView::MenuAction::SortFilesBy );
 	ui->mapDirView->addMenuSeparator();
 	ui->mapDirView->addStandardMenuActions( ExtendedListView::MenuAction::ToggleIcons );
 
 	connect( ui->mapDirView, &ExtendedTreeView::sortActionTriggered, this, &ThisClass::onSortActionTriggered );
+	connect( refreshMapDirAction, &QAction::triggered, this, &ThisClass::refreshMapDirList );
 
 	// setup icons (must be set called after enableContextMenu, because it requires toggleIconsAction)
 	ui->mapDirView->toggleIcons( MapSettings{}.showIcons );  // we need to do this instead of model.toggleIcons() in order to update the action text
@@ -1280,6 +1291,9 @@ void MainWindow::setupModList()
 	connect( createNewDMBAction, &QAction::triggered, this, &ThisClass::modCreateNewDMB );
 	connect( addExistingDMBAction, &QAction::triggered, this, &ThisClass::modAddExistingDMB );
 
+	uncheckAllModsAction = ui->modListView->addCustomMenuAction( "Uncheck all mods", {} );
+	connect( uncheckAllModsAction, &QAction::triggered, this, &ThisClass::modUncheckAll );
+
 	// setup icons (must be set called after enableContextMenu, because it requires toggleIconsAction)
 	ui->modListView->toggleIcons( ModSettings{}.showIcons );  // we need to do this instead of model.toggleIcons() in order to update the action text
 	connect( ui->modListView->toggleIconsAction, &QAction::triggered, this, &ThisClass::onModIconsToggled );
@@ -1291,6 +1305,7 @@ void MainWindow::setupModList()
 	connect( ui->modBtnDel, &QToolButton::clicked, this, &ThisClass::modDelete );
 	connect( ui->modBtnUp, &QToolButton::clicked, this, &ThisClass::modMoveUp );
 	connect( ui->modBtnDown, &QToolButton::clicked, this, &ThisClass::modMoveDown );
+	connect( ui->modBtnUncheckAll, &QToolButton::clicked, this, &ThisClass::modUncheckAll );
 
 	connect( ui->mapsAfterModsChkBox, &QCheckBox::toggled, this, &ThisClass::onMapsAfterModsToggled );
 }
@@ -1306,6 +1321,23 @@ void MainWindow::setupEnvVarLists()
 	// setup edit callbacks
 	connect( ui->presetEnvVarTable, &QTableWidget::cellChanged, this, &ThisClass::onPresetEnvVarDataChanged );
 	connect( ui->globalEnvVarTable, &QTableWidget::cellChanged, this, &ThisClass::onGlobalEnvVarDataChanged );
+}
+
+void MainWindow::applyCacowardsSettings()
+{
+	cacowardsTab->setTargetDir( !modSettings.cacowardsDownloadDir.isEmpty() ? modSettings.cacowardsDownloadDir : modSettings.idgamesDownloadDir );
+	cacowardsTab->setAutosort( modSettings.cacowardsAutosort );
+	cacowardsTab->setUnpack( modSettings.cacowardsUnpack );
+	cacowardsTab->setDeleteAfterExtract( modSettings.cacowardsDeleteAfterExtract );
+	cacowardsTab->setParallelDownload( modSettings.cacowardsParallel );
+	cacowardsTab->setExpandedNodes( modSettings.cacowardsExpandedNodes );
+	cacowardsTab->setMapSourceDir( mapSettings.dir );
+}
+
+void MainWindow::applyIdgamesSettings()
+{
+	idgamesTab->setTargetDir( !modSettings.idgamesDownloadDir.isEmpty() ? modSettings.idgamesDownloadDir : modSettings.lastUsedDir );
+	idgamesTab->setMapSourceDir( mapSettings.dir );
 }
 
 void MainWindow::loadMonitorInfo( QComboBox * box )
@@ -1922,6 +1954,10 @@ void MainWindow::restoreLoadedOptions( OptionsToLoad && opts )
 
 	restoreGlobalOptions( globalOpts );
 
+	// Cacowards / IdGames tab settings are loaded from options *after* the tabs were created, so they must be re-applied here.
+	applyCacowardsSettings();
+	applyIdgamesSettings();
+
 	restoringOptionsInProgress = false;
 
 	updateLaunchCommand();
@@ -1987,6 +2023,9 @@ void MainWindow::restorePreset( Preset & preset )
 	// restore additional command line arguments
 	ui->presetCmdArgsLine->setText( preset.cmdArgs );
 
+	// restore per-preset launcher tweaks
+	ui->gamescopeChkBox->setChecked( preset.useGamescope );
+
 	restoreEnvVars( preset.envVars, ui->presetEnvVarTable );
 
 	restoringPresetInProgress = false;
@@ -2012,21 +2051,21 @@ void MainWindow::restoreSelectedEngine( Preset & preset )
 			QString selectedEnginePath = engineModel[ engineIdx ].executablePath;
 			if (!fs::isValidFile( selectedEnginePath ))
 			{
-				reportUserError( "Engine no longer exists",
-					"Engine selected for this preset ("%selectedEnginePath%") no longer exists. "
-					"Please update its path in Menu -> Initial Setup, or select another one."
-				);
+				// the engine is still in the list, but its executable is no longer reachable at the saved path
+				ui->engineCmbBox->setCurrentIndex( -1 );
+				preset.selectedEngine.clear();
+				preset.compatOpts.compatMode = -1;  // compat mode is engine-specific so the previous mode is no longer valid
 				highlightListItemAsInvalid( engineModel[ engineIdx ] );
+				handleUnavailableEngine( preset, engineModel[ engineIdx ].name, selectedEnginePath );
 			}
 		}
 		else
 		{
-			reportUserError( "Engine no longer exists",
-				"Engine selected for this preset ("%preset.selectedEngine%") was removed from engine list. "
-				"Please select another one."
-			);
+			// the engine this preset references is no longer present in the engine list
+			ui->engineCmbBox->setCurrentIndex( -1 );
 			preset.selectedEngine.clear();
 			preset.compatOpts.compatMode = -1;  // compat mode is engine-specific so the previous mode is no longer valid
+			handleUnavailableEngine( preset, {}, {} );
 		}
 	}
 
@@ -2039,6 +2078,61 @@ void MainWindow::restoreSelectedEngine( Preset & preset )
 	{
 		onEngineSelected( newIdx );
 	}
+}
+
+// Called when the engine that a preset references is either missing from the engine list,
+// or its executable path is no longer reachable. Offers the user to pick a replacement
+// engine, or takes them to the Initial Setup dialog if there is nothing to pick from.
+void MainWindow::handleUnavailableEngine( Preset & preset, const QString & missingName, const QString & missingPath )
+{
+	const QString engineDesc =
+		(!missingName.isEmpty() || !missingPath.isEmpty())
+			? QString( "The engine \"%1\" [%2] that this preset uses is no longer available." )
+				.arg( missingName.isEmpty() ? QStringLiteral("<unnamed>") : missingName )
+				.arg( missingPath )
+			: QString( "The engine that this preset uses is no longer present in your engine list." );
+
+	// collect the engines the user can choose from (ignore separators)
+	QStringList engineLabels;
+	QList< int > engineIndices;
+	for (int i = 0; i < engineModel.size(); ++i)
+	{
+		const EngineInfo & engine = engineModel[ i ];
+		if (engine.isSeparator)
+			continue;
+		engineLabels << QString( "%1  [%2]" ).arg( engine.name.isEmpty() ? QStringLiteral("<unnamed>") : engine.name ).arg( engine.executablePath );
+		engineIndices << i;
+	}
+
+	// nothing to choose from -> take the user straight to the Initial Setup dialog
+	if (engineLabels.isEmpty())
+	{
+		QMessageBox::information( this, "No engines configured",
+			engineDesc + "\n\nNo engines are configured. You'll be taken to the Initial Setup dialog so you can add one." );
+		runSetupDialog();
+		return;  // the preset is left engine-less; the user can assign one from the engine selector
+	}
+
+	QMessageBox msgBox( QMessageBox::Question, "Engine no longer exists",
+		engineDesc + "\n\nDo you want to select a different engine now?",
+		QMessageBox::Yes | QMessageBox::No, this );
+	msgBox.button( QMessageBox::Yes )->setText( "Select another engine" );
+	msgBox.button( QMessageBox::No )->setText( "Don't use any engine" );
+	if (msgBox.exec() != QMessageBox::Yes)
+		return;
+
+	bool ok = false;
+	const QString chosen = QInputDialog::getItem( this, "Select another engine",
+		"Which engine should this preset use?", engineLabels, 0, /*editable*/ false, &ok );
+	if (!ok || chosen.isEmpty())
+		return;
+
+	const int chosenIdx = engineLabels.indexOf( chosen );
+	if (chosenIdx < 0)
+		return;
+
+	preset.selectedEngine = engineModel[ engineIndices[ chosenIdx ] ].getID();
+	ui->engineCmbBox->setCurrentIndex( engineIndices[ chosenIdx ] );
 }
 
 void MainWindow::restoreSelectedConfig( Preset & preset )
@@ -2511,6 +2605,8 @@ void MainWindow::runSetupDialog()
 		engineModel.finishCompleteUpdate();
 		iwadModel.finishCompleteUpdate();
 		resetMapDirModelAndView();
+		cacowardsTab->setMapSourceDir( mapSettings.dir );
+		idgamesTab->setMapSourceDir( mapSettings.dir );
 
 		// select back the previously selected items
 		wdg::setCurrentItemByID( ui->engineCmbBox, engineModel, currentEngine );
@@ -2854,6 +2950,7 @@ void MainWindow::togglePresetSubWidgets( const Preset * selectedPreset )
 	ui->modGrpBox->setEnabled( selectedPreset != nullptr );
 
 	ui->presetCmdArgsLine->setEnabled( selectedPreset != nullptr );
+	ui->gamescopeChkBox->setEnabled( selectedPreset != nullptr );
 
 	// Launch Options tab
 
@@ -2891,6 +2988,7 @@ void MainWindow::clearPresetSubWidgets()
 	modModel.finishCompleteUpdate();
 
 	ui->presetCmdArgsLine->clear();
+	ui->gamescopeChkBox->setChecked( false );
 
 	// Launch Options tab
 
@@ -2995,7 +3093,7 @@ void MainWindow::onEngineSelected( int index )
 
 void MainWindow::toggleAndClearEngineDependentWidgets( const EngineInfo * engine )
 {
-	ui->engineDirBtn->setEnabled( shouldEnableEngineDirBtn( engine ) );
+	ui->engineDirBtn->setEnabled( true );  // always enabled, it opens the Initial Setup dialog
 	toggleAndDeselect( ui->configCmbBox, shouldEnableConfigCmbBox( engine ) );
 	ui->configCloneBtn->setEnabled( shouldEnableConfigCloneBtn( engine ) );
 
@@ -3233,7 +3331,9 @@ void MainWindow::onModDoubleClicked( const QModelIndex & index )
 
 void MainWindow::onEngineDirBtnClicked()
 {
-	openCurrentEngineDataDir();
+	// the folder button next to the engine selector opens the Initial Setup dialog,
+	// where the user can add and configure the engines
+	runSetupDialog();
 }
 
 void MainWindow::onCloneConfigBtnClicked()
@@ -3827,6 +3927,19 @@ void MainWindow::modMoveToBottom()
 
 	scheduleSavingOptions();
 	updateLaunchCommand();
+}
+
+void MainWindow::modUncheckAll()
+{
+	// uncheck all mods (clear all the "included in launch" checkboxes) in the current preset
+	if (modModel.isEmpty())  // nothing to uncheck
+		return;
+
+	modModel.startEditingItemData();
+	for (Mod & mod : modModel)
+		mod.setChecked( false );
+	modModel.finishEditingItemData( 0, modModel.size(), AListModel::onlyCheckStateRole );
+	modModel.notifyDataChanged( 0, modModel.size(), AListModel::onlyCheckStateRole );  // updates the current preset + launch command
 }
 
 void MainWindow::onModsInserted( int row, int count )
@@ -4927,6 +5040,14 @@ void MainWindow::onCmdPrefixChanged( const QString & text )
 	updateLaunchCommand();
 }
 
+void MainWindow::onGamescopeToggled( bool checked )
+{
+	/*bool storageModified =*/ STORE_PRESET_OPTION( .useGamescope, checked );
+
+	//scheduleSavingOptions( storageModified );
+	updateLaunchCommand();
+}
+
 void MainWindow::onLaunchBtnClicked()
 {
 	executeLaunchCommand();
@@ -5055,6 +5176,20 @@ void MainWindow::resetMapDirModelAndView()
 	// But when the directory is changed, the model and view needs to be reset.
 	QModelIndex newRootIdx = mapModel.setRootPath( mapSettings.dir );
 	ui->mapDirView->setRootIndex( newRootIdx );
+}
+
+void MainWindow::refreshMapDirList()
+{
+	if (mapSettings.dir.isEmpty())
+		return;  // no map directory configured, nothing to refresh
+
+	// QFileSystemModel caches its content, so simply re-setting the same root path doesn't re-read the directory.
+	// To really refresh the list we have to detach the old root and re-attach it, which forces a fresh scan.
+	mapModel.setRootPath( QString() );
+	const QModelIndex newRootIdx = mapModel.setRootPath( mapSettings.dir );
+	ui->mapDirView->setRootIndex( newRootIdx );
+
+	// QFileSystemModel fills the list asynchronously; re-selection is handled by onMapDirUpdated -> restoreSelectedMapPacks
 }
 
 void MainWindow::updateConfigFilesFromDir()
@@ -5764,6 +5899,15 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 
 	if (!ui->presetCmdArgsLine->text().isEmpty())
 		appendCustomArguments( cmd.arguments, ui->presetCmdArgsLine->text(), opts.quotePaths );
+
+	//-- misc launcher tweaks -------------------------------------------------------
+
+	// Wrap the whole command in a gamescope fullscreen instance, so that on Steam Deck / handhelds
+	// the engine always gets a visible, focused window instead of opening an invisible one in the background.
+ #if !IS_WINDOWS && !IS_MACOS
+	if (selectedPreset && selectedPreset->useGamescope)
+		prependCommandWith( cmd, "gamescope -f -e --", opts.quotePaths );
+ #endif
 
 	//------------------------------------------------------------------------------
 

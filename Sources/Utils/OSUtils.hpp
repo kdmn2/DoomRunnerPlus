@@ -120,6 +120,16 @@ ShellCommand getRunCommand(
 /** True means the executable can be started directly by using only its name without its path. */
 bool isInSearchPath( const QString & filePath );
 
+/// Returns paths of all executables found on the system whose file name contains any of the given text fragments.
+/** Searches all directories listed in the PATH environment variable, plus a few standard locations,
+  * and returns their absolute paths. The result is de-duplicated and sorted. */
+QStringList findAppsByFileName( const QStringList & nameFragments );
+
+/// Returns paths of executables that are likely Doom source ports, based on their file names.
+/** Besides the obvious "doom" match, it also looks up the known names of ports that don't have "doom"
+  * in their executable name (e.g. prboom, woof, zandronum, odamex, eternity). */
+QStringList findDoomEngines();
+
 
 //======================================================================================================================
 // graphical environment

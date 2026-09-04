@@ -361,6 +361,8 @@ struct ModSettings
 	bool cacowardsAutosort = false;          ///< sort Cacowards downloads into "Cacowards/[Year]/[Category]" subfolders
 	bool cacowardsUnpack = false;            ///< extract Cacowards downloads into folders named after the archive
 	bool cacowardsDeleteAfterExtract = false;///< delete the original archive after extracting it
+	bool cacowardsParallel = false;          ///< download up to 4 Cacowards files at the same time
+	QStringList cacowardsExpandedNodes;      ///< Cacowards tree nodes that were expanded (paths like "2004"/"2004/Winners")
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;
@@ -467,6 +469,7 @@ struct Preset : public AModelItem
 	QStringList selectedMapPacks;
 	PtrList< Mod > mods;   // this list needs to be kept in sync with mod list widget
 	bool loadMapsAfterMods = false;
+	bool useGamescope = false;   ///< run the engine inside a gamescope fullscreen instance (useful on Steam Deck / handhelds)
 
 	LaunchOptions launchOpts;
 	MultiplayerOptions multOpts;

@@ -51,6 +51,9 @@ class IdgamesTab : public QWidget {
 	void setTargetDir( const QString & dir );
 	QString targetDir() const;
 
+	/// Sets the directory used as the source of map packs (used as a fallback download target suggestion).
+	void setMapSourceDir( const QString & dir );
+
  signals:
 
 	/// Emitted after a file has been successfully downloaded and saved to disk.
@@ -109,7 +112,8 @@ class IdgamesTab : public QWidget {
 	void showDetails( int row );
 	void setStatus( const QString & text );
 	QString sanitizeFileName( const QString & fileName ) const;
-	bool ensureTargetDirExists();
+	bool ensureTargetDirUsable();
+	bool askToUseMapDir( const QString & targetDir );
 	void startSearch( const QString & query );
 	QList< int > checkedRows() const;
 	void updateDownloadBtnState();
@@ -128,6 +132,8 @@ class IdgamesTab : public QWidget {
 	bool batchActive_ = false;         ///< whether a download batch is currently running
 
 	QList< RemoteWadEntry > results_;
+
+	QString mapSourceDir_;   ///< directory used as the source of map packs (suggested as a fallback download target)
 
 	// widgets
 

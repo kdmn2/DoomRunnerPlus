@@ -17,6 +17,8 @@
         <file alias="Help.12.png">Buttons/Help.12.png</file>
         <file alias="Help.16.png">Buttons/Help.16.png</file>
         <file alias="Checkmark.png">Buttons/Checkmark.png</file>
+        <file alias="Uncheck.png">Buttons/Uncheck.png</file>
+        <file alias="AutoDetect.png">Buttons/AutoDetect.png</file>
         <file alias="Play.png">Buttons/Play.png</file>
     </qresource>
 </RCC>

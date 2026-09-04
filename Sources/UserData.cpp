@@ -640,6 +640,8 @@ QJsonObject ModSettings::serialize() const
 	settingsJs["cacowards_autosort"] = settings.cacowardsAutosort;
 	settingsJs["cacowards_unpack"] = settings.cacowardsUnpack;
 	settingsJs["cacowards_delete_after_extract"] = settings.cacowardsDeleteAfterExtract;
+	settingsJs["cacowards_parallel"] = settings.cacowardsParallel;
+	settingsJs["cacowards_expanded_nodes"] = serializeStringList( settings.cacowardsExpandedNodes );
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -655,6 +657,9 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 	settings.cacowardsAutosort = settingsJs.getBool( "cacowards_autosort", settings.cacowardsAutosort );
 	settings.cacowardsUnpack = settingsJs.getBool( "cacowards_unpack", settings.cacowardsUnpack );
 	settings.cacowardsDeleteAfterExtract = settingsJs.getBool( "cacowards_delete_after_extract", settings.cacowardsDeleteAfterExtract );
+	settings.cacowardsParallel = settingsJs.getBool( "cacowards_parallel", settings.cacowardsParallel );
+	if (JsonArrayCtx nodesJs = settingsJs.getArray( "cacowards_expanded_nodes" ))
+		settings.cacowardsExpandedNodes = deserializeStringList( nodesJs );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

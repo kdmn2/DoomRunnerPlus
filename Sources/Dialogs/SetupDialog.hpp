@@ -63,6 +63,7 @@ class SetupDialog : public QDialog, public DialogWithPaths {
 	void engineMoveDown();
 	void engineMoveToTop();
 	void engineMoveToBottom();
+	void engineAutoDetect();
 	void onEnginesInserted( int row, int count );
 
 	void onEngineSelectionChanged( const QItemSelection & selected, const QItemSelection & deselected );

@@ -134,6 +134,42 @@
               </property>
              </widget>
             </item>
+            <item>
+             <spacer name="engineBtnRightSpacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QToolButton" name="engineBtnAutoDetect">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>26</width>
+                <height>26</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Search the system for installed Doom engines</string>
+              </property>
+              <property name="icon">
+               <iconset resource="../Resources/Resources.qrc">
+                <normaloff>:/AutoDetect.png</normaloff>:/AutoDetect.png</iconset>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>

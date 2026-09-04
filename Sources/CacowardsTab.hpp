@@ -15,6 +15,9 @@
 #include <QString>
 #include <QStringList>
 #include <QList>
+#include <QElapsedTimer>
+#include <memory>  // std::unique_ptr
+#include <vector>
 
 
 class QTreeWidget;
@@ -28,6 +31,7 @@ class QProgressBar;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QFile;
+template< typename T > class QFutureWatcher;
 
 
 /// One Cacowards-awarded WAD, ready to be downloaded from /idgames.
@@ -62,6 +66,8 @@ class CacowardsTab : public QWidget {
 
 	Q_OBJECT
 
+	struct ActiveDownload;  // forward declaration (defined below in the private section)
+
  public:
 
 	explicit CacowardsTab( QWidget * parent = nullptr );
@@ -80,6 +86,18 @@ class CacowardsTab : public QWidget {
 	/// Sets the path of the JSON file the Cacowards list is loaded from and saved to.
 	void setDataFilePath( const QString & path );
 
+	/// Returns the list of currently expanded nodes (each as a path like "2004"/"2004/Winners").
+	QStringList expandedNodes() const;
+
+	/// Restores the expansion state saved on a previous run (applied when the tree is rebuilt).
+	void setExpandedNodes( const QStringList & nodes );
+
+	void setParallelDownload( bool enabled );
+	bool parallelDownload() const;
+
+	/// Sets the directory used as the source of map packs (used as a fallback download target suggestion).
+	void setMapSourceDir( const QString & dir );
+
  signals:
 
 	/// Emitted after a file has been successfully downloaded and saved to disk.
@@ -93,6 +111,12 @@ class CacowardsTab : public QWidget {
 	void unpackChanged( bool enabled );
 	void deleteAfterExtractChanged( bool enabled );
 
+	/// Emitted whenever the user expands or collapses a node in the list.
+	void expansionChanged();
+
+	/// Emitted when the user toggles parallel downloads.
+	void parallelDownloadChanged( bool enabled );
+
  private slots:
 
 	void refresh();
@@ -100,9 +124,10 @@ class CacowardsTab : public QWidget {
 	void importExportedXml();
 	void onCurrentItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous );
 	void onItemChanged( QTreeWidgetItem * item, int column );
+	void onExpansionChanged();
 	void browseTargetDir();
 	void downloadChecked();
-	void onDownloadFinished();
+	void onDownloadFinished( ActiveDownload * download );
 	void onRefreshYearFetched();
 	void onRefreshIdResolved();
 
@@ -116,17 +141,35 @@ class CacowardsTab : public QWidget {
 		QString title;        ///< entry title, used to name the folder when unpacking
 	};
 
+	/// A download that is currently in progress (one per active network request).
+	struct ActiveDownload
+	{
+		QNetworkReply * reply = nullptr;
+		QFile * file = nullptr;         ///< file currently being written to
+		QString path;                   ///< absolute path of the file being downloaded
+		QString title;                  ///< entry title, used to name the folder when unpacking
+		QStringList urls;               ///< candidate mirror URLs for this file
+		int urlIdx = 0;                 ///< index of the mirror currently being tried
+		QFutureWatcher< bool > * unpackWatcher = nullptr;   ///< watcher for the background unpacking, null if no unpacking in progress
+		QString extractDir;             ///< directory the archive is being extracted into (while unpacking)
+	};
+
 	void buildUi();
 	void loadData();
 	bool loadDataFromJson( const QByteArray & json, QList< CacowardEntry > & out ) const;
-	void buildTree();
+	void buildTree( bool restoreExpansion = false );
+	void applyExpansionState();
 	void setStatus( const QString & text );
 	QString sanitizeFileName( const QString & fileName ) const;
-	bool ensureTargetDirExists();
 	QList< PendingDownload > collectCheckedDownloads() const;
+	bool ensureTargetDirUsable();
+	bool askToUseMapDir( const QString & targetDir );
 	void updateDownloadBtnState();
 	void startNextDownload();
-	void startDownload( const QString & filePath );
+	void startDownload( ActiveDownload * download );
+	void onUnpackFinished( ActiveDownload * download );
+	void removeDownload( ActiveDownload * download );
+	void updateDownloadProgress();
 
 	// list refresh (fetch from doomwiki, resolve ids, save JSON)
 	void startNextRefreshYear();
@@ -135,20 +178,22 @@ class CacowardsTab : public QWidget {
 	void parseExportXml( const QByteArray & xml, QList< CacowardEntry > & out ) const;
 	void openBrowserExportPage();
 	void startNextRefreshResolution();
+	void updateResolveProgress( const CacowardEntry & entry );
+	static QString formatRemainingEstimate( qint64 ms );
 	void saveDataFile();
 
 	QNetworkAccessManager * network_;
-	QNetworkReply * downloadReply_ = nullptr;
-	QFile * downloadFile_ = nullptr;   ///< file currently being written to during a download
-	QString downloadPath_;             ///< absolute path of the file currently being downloaded
-	QString downloadTitle_;            ///< entry title of the file currently being downloaded
-	QStringList downloadUrls_;         ///< candidate mirror URLs for the current download
-	int downloadUrlIdx_ = 0;           ///< index of the mirror currently being tried
 	QList< PendingDownload > pendingDownloads_;   ///< files still waiting to be downloaded
 	int downloadCount_ = 0;            ///< total number of files in the current download batch
 	bool batchActive_ = false;         ///< whether a download batch is currently running
+	std::vector< std::unique_ptr< ActiveDownload > > activeDownloads_;   ///< downloads currently in progress (up to maxParallel_)
+	int maxParallel_ = 1;              ///< how many files are downloaded at the same time
 
 	QList< CacowardEntry > entries_;   ///< the currently displayed list
+
+	// expansion state
+	QStringList expandedNodes_;        ///< saved list of expanded nodes (each as a path like "2004"/"2004/Winners")
+	bool restoringExpansion_ = false;  ///< guards against emitting expansionChanged while programmatically restoring the state
 
 	// refresh state
 	QNetworkReply * refreshReply_ = nullptr;
@@ -157,6 +202,8 @@ class CacowardsTab : public QWidget {
 	QList< CacowardEntry > refreshEntries_;   ///< entries accumulated while refreshing
 	int refreshResolveIdx_ = 0;        ///< index of the next entry whose id needs resolving
 	int refreshResolvedCount_ = 0;     ///< number of successfully resolved entries
+	int refreshNetworkSteps_ = 0;      ///< number of idgames API requests already answered (for the ETA estimate)
+	QElapsedTimer refreshTimer_;       ///< measures how long the resolution phase has been running
 
 	// widgets
 
@@ -171,9 +218,11 @@ class CacowardsTab : public QWidget {
 	QCheckBox * autosortChk_ = nullptr;
 	QCheckBox * unpackChk_ = nullptr;
 	QCheckBox * deleteAfterExtractChk_ = nullptr;
+	QCheckBox * parallelChk_ = nullptr;
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
 	QString dataFilePath_;
+	QString mapSourceDir_;   ///< directory used as the source of map packs (suggested as a fallback download target)
 
 };
 

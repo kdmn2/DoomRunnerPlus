@@ -85,6 +85,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onModDoubleClicked( const QModelIndex & index );
 
 	void onMapDirUpdated( const QString & path );
+	void refreshMapDirList();
 
 	void onEngineDirBtnClicked();
 	void onCloneConfigBtnClicked();
@@ -118,6 +119,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void modMoveDown();
 	void modMoveToTop();
 	void modMoveToBottom();
+	void modUncheckAll();
 	void onModsInserted( int row, int count );
 	void onModsRemoved( int row, int count );
 	void onModsDropped( int row, int count, DnDSources dndSource );
@@ -197,6 +199,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onPresetCmdArgsChanged( const QString & text );
 	void onGlobalCmdArgsChanged( const QString & text );
 	void onCmdPrefixChanged( const QString & text );
+	void onGamescopeToggled( bool checked );
 
 	void onLaunchBtnClicked();
 
@@ -210,6 +213,9 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void setupModList();
 
 	void setupEnvVarLists();
+
+	void applyCacowardsSettings();
+	void applyIdgamesSettings();
 
 	void loadMonitorInfo( QComboBox * box );
 
@@ -233,6 +239,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void restorePreset( Preset & preset );
 
 	void restoreSelectedEngine( Preset & preset );
+	void handleUnavailableEngine( Preset & preset, const QString & missingName, const QString & missingPath );
 	void restoreSelectedConfig( Preset & preset );
 	void restoreSelectedIWAD( Preset & preset );
 	void restoreSelectedMapPacks( Preset & preset );
@@ -401,10 +408,12 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	CacowardsTab * cacowardsTab = nullptr;
 
 	QAction * hideLabelAction = nullptr;
+	QAction * refreshMapDirAction = nullptr;
 
 	QAction * addCmdArgAction = nullptr;
 	QAction * createNewDMBAction = nullptr;
 	QAction * addExistingDMBAction = nullptr;
+	QAction * uncheckAllModsAction = nullptr;
 
 	QAction * resetPlayerColorAction = nullptr;
 

@@ -16,12 +16,20 @@
 #include "Utils/StringUtils.hpp"  // emptyString
 #include "Utils/MiscUtils.hpp"  // makeFileFilter
 #include "Utils/ErrorHandling.hpp"
+#include "Utils/OSUtils.hpp"  // findAppsByFileName
 
 #include <QString>
 #include <QStringBuilder>
 #include <QDir>
 #include <QFileInfo>
 #include <QAction>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QListWidget>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QMessageBox>
+#include <QToolButton>
 
 
 //======================================================================================================================
@@ -175,6 +183,7 @@ void SetupDialog::setupEngineList()
 	connect( ui->engineBtnDel, &QPushButton::clicked, this, &ThisClass::engineDelete );
 	connect( ui->engineBtnUp, &QPushButton::clicked, this, &ThisClass::engineMoveUp );
 	connect( ui->engineBtnDown, &QPushButton::clicked, this, &ThisClass::engineMoveDown );
+	connect( ui->engineBtnAutoDetect, &QToolButton::clicked, this, &ThisClass::engineAutoDetect );
 }
 
 void SetupDialog::setupIWADList()
@@ -330,6 +339,74 @@ void SetupDialog::engineMoveToBottom()
 	wdg::moveSelectedItemsToBottom( ui->engineListView, engineModel );
 }
 
+void SetupDialog::engineAutoDetect()
+{
+	const QStringList foundPaths = os::findDoomEngines();
+
+	if (foundPaths.isEmpty())
+	{
+		QMessageBox::information( this, "No Doom engines found",
+			"No Doom source ports were found on your system.\n\n"
+			"You can still add an engine manually using the + button."
+		);
+		return;
+	}
+
+	// present the found applications with a checkbox for each, so the user can choose which ones to add
+	QDialog dialog( this );
+	dialog.setWindowTitle( "Add found Doom engines" );
+
+	auto * layout = new QVBoxLayout( &dialog );
+
+	auto * infoLabel = new QLabel( "The following applications were found on your system.\n"
+		"Check the ones you want to add to your engine list." );
+	layout->addWidget( infoLabel );
+
+	auto * listWidget = new QListWidget;
+	for (const QString & path : foundPaths)
+	{
+		auto * item = new QListWidgetItem( fs::getFileNameFromPath( path ) );
+		item->setData( Qt::UserRole, path );
+		item->setToolTip( path );
+		item->setFlags( item->flags() | Qt::ItemIsUserCheckable );
+		item->setCheckState( Qt::Unchecked );
+		listWidget->addItem( item );
+	}
+	layout->addWidget( listWidget );
+
+	auto * buttonBox = new QDialogButtonBox( QDialogButtonBox::Ok | QDialogButtonBox::Cancel );
+	connect( buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept );
+	connect( buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject );
+	layout->addWidget( buttonBox );
+
+	if (dialog.exec() != QDialog::Accepted)
+		return;
+
+	// for each engine the user chose, let them review/adjust it in the Engine Properties dialog
+	// before it is actually added to the list
+	for (int i = 0; i < listWidget->count(); ++i)
+	{
+		QListWidgetItem * item = listWidget->item( i );
+		if (item->checkState() != Qt::Checked)
+			continue;
+
+		const QString absolutePath = fs::getAbsolutePath( item->data( Qt::UserRole ).toString() );
+
+		EngineInfo engine;
+		engine.id = generateUniqueID();  // presets reference engines by ID, it must be set right away (also prevents the auto-select-executable prompt)
+		EngineDialog::autofillEngineInfo( engine, absolutePath );  // pre-fill "Name" and "Executable path" (and the rest) from the found executable
+
+		EngineDialog engineDialog( this, pathConvertor, engine, std::move(lastUsedDir) );
+		if (engineDialog.exec() != QDialog::Accepted)
+			continue;
+
+		lastUsedDir = engineDialog.takeLastUsedDir();
+		wdg::appendItem( ui->engineListView, engineModel, engineDialog.engine );
+	}
+
+	ui->engineListView->setFocus();
+}
+
 void SetupDialog::onEnginesInserted( int row, int count )
 {
 	// Engine (or more of them) got copy&pasted or dragged&dropped into this list.
@@ -344,6 +421,11 @@ void SetupDialog::onEnginesInserted( int row, int count )
 			// the executablePath is already converted to the right path style by the ListModel
 			EngineDialog::autofillEngineInfo( engine, engine.executablePath );
 		}
+
+		// Every engine must have a stable unique ID (presets reference engines by ID),
+		// otherwise it would be re-generated on every start and the presets would lose their engine.
+		if (engine.id.isEmpty())
+			engine.id = generateUniqueID();
 	}
 }
 

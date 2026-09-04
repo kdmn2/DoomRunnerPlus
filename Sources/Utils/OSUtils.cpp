@@ -20,6 +20,9 @@
 #include <QRegularExpression>
 #include <QScreen>
 #include <QProcess>
+#include <QDir>
+#include <QFileInfo>
+#include <QSet>
 
 #if IS_WINDOWS
 	#include <windows.h>
@@ -616,6 +619,78 @@ AppInfo getAppInfo( const QString & executablePath )
 	info.normalizedName = getNormalizedName( info );
 
 	return info;
+}
+
+QStringList findAppsByFileName( const QStringList & nameFragments )
+{
+	// gather all fragments in lower-case once, so that the per-file check is as cheap as possible
+	QStringList fragments;
+	fragments.reserve( nameFragments.size() );
+	for (const QString & fragment : nameFragments)
+		if (!fragment.isEmpty())
+			fragments.append( fragment.toLower() );
+
+	// Gather the directories where applications/executables are typically installed.
+	QStringList dirPaths;
+	const QChar pathSeparator = IS_WINDOWS ? ';' : ':';
+	for (const QString & dirPath : qEnvironmentVariable("PATH").split( pathSeparator, Qt::SkipEmptyParts ))
+		dirPaths.append( dirPath );
+	if constexpr (!IS_WINDOWS && !IS_MACOS)
+	{
+		// some installation methods (Flatpak, Snap, ...) don't add their binaries to PATH
+		dirPaths << "/usr/bin" << "/usr/local/bin" << "/snap/bin" << "/var/lib/flatpak/exports/bin";
+	}
+
+	QStringList foundPaths;
+	QSet< QString > uniquePaths;
+
+	for (const QString & dirPath : dirPaths)
+	{
+		const QDir dir( dirPath );
+		if (!dir.isReadable())
+			continue;
+
+		for (const QFileInfo & entry : dir.entryInfoList( QDir::Files | QDir::NoDotAndDotDot ))
+		{
+			// cheap string check first, only stat the file if the name looks like a match
+			const QString entryName = entry.fileName().toLower();
+			bool matches = false;
+			for (const QString & fragment : fragments)
+			{
+				if (entryName.contains( fragment ))
+				{
+					matches = true;
+					break;
+				}
+			}
+			if (!matches || !entry.isExecutable())
+				continue;
+
+			const QString absPath = entry.canonicalFilePath();
+			if (absPath.isEmpty() || uniquePaths.contains( absPath ))
+				continue;
+
+			uniquePaths.insert( absPath );
+			foundPaths.append( absPath );
+		}
+	}
+
+	foundPaths.sort( Qt::CaseInsensitive );
+	return foundPaths;
+}
+
+QStringList findDoomEngines()
+{
+	// Names of the known Doom source ports. Besides the obvious "doom" (covered by the first entry),
+	// these are the frequently used executables of ports whose name doesn't contain the word "doom".
+	return findAppsByFileName({
+		"doom",       // GZDoom, Chocolate Doom, Crispy Doom, DSDA-Doom, Doom Retro, nugget-doom, ...
+		"prboom",     // PrBoom, PrBoom+
+		"woof",       // Woof
+		"zandronum",  // Zandronum
+		"odamex",     // Odamex
+		"eternity",   // Eternity Engine
+	});
 }
 
 // On Unix, to run an executable file inside current working directory, the relative path needs to be prepended by "./"

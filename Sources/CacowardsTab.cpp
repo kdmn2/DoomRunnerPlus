@@ -8,6 +8,7 @@
 #include "CacowardsTab.hpp"
 
 #include "Utils/ZipReader.hpp"   // extractZipArchive
+#include "Utils/FileSystemUtils.hpp"  // isDirectoryWritable
 
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -38,6 +39,10 @@
 #include <QXmlStreamReader>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QtGlobal>  // qBound, qMax, qint64
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrentRun>
+#include <memory>    // std::make_unique
 
 #include <algorithm>
 
@@ -104,11 +109,14 @@ CacowardsTab::CacowardsTab( QWidget * parent )
 
 CacowardsTab::~CacowardsTab()
 {
-	if (downloadReply_)
-		downloadReply_->abort();
+	for (const auto & download : activeDownloads_)
+	{
+		if (download->reply)
+			download->reply->abort();
+		delete download->file;
+	}
 	if (refreshReply_)
 		refreshReply_->abort();
-	delete downloadFile_;
 }
 
 void CacowardsTab::setTargetDir( const QString & dir )
@@ -156,6 +164,49 @@ void CacowardsTab::setDataFilePath( const QString & path )
 {
 	dataFilePath_ = path;
 	loadData();
+}
+
+QStringList CacowardsTab::expandedNodes() const
+{
+	QStringList nodes;
+
+	QTreeWidgetItemIterator it( tree_ );
+	while (*it)
+	{
+		QTreeWidgetItem * node = *it;
+		if (node->isExpanded())
+		{
+			QStringList path;
+			for (QTreeWidgetItem * cur = node; cur; cur = cur->parent())
+				path.prepend( cur->text( 0 ) );
+			nodes.append( path.join( '/' ) );
+		}
+		++it;
+	}
+
+	return nodes;
+}
+
+void CacowardsTab::setExpandedNodes( const QStringList & nodes )
+{
+	expandedNodes_ = nodes;
+}
+
+void CacowardsTab::setParallelDownload( bool enabled )
+{
+	maxParallel_ = enabled ? 4 : 1;
+	if (parallelChk_)
+		parallelChk_->setChecked( enabled );
+}
+
+bool CacowardsTab::parallelDownload() const
+{
+	return maxParallel_ > 1;
+}
+
+void CacowardsTab::setMapSourceDir( const QString & dir )
+{
+	mapSourceDir_ = dir;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -226,11 +277,16 @@ void CacowardsTab::buildUi()
 	deleteAfterExtractChk_->setToolTip( "Delete the original archive after it has been unpacked" );
 	deleteAfterExtractChk_->setEnabled( false );
 
+	parallelChk_ = new QCheckBox( "Download 4 at a time", this );
+	parallelChk_->setToolTip( "Download up to 4 files at the same time (otherwise they are downloaded one by one)" );
+	parallelChk_->setChecked( maxParallel_ > 1 );
+
 	QHBoxLayout * optionsRow = new QHBoxLayout;
 	optionsRow->addStretch( 1 );
 	optionsRow->addWidget( autosortChk_ );
 	optionsRow->addWidget( unpackChk_ );
 	optionsRow->addWidget( deleteAfterExtractChk_ );
+	optionsRow->addWidget( parallelChk_ );
 
 	//-- status bar -------------------------------------------------------------
 
@@ -257,6 +313,8 @@ void CacowardsTab::buildUi()
 	connect( importBtn_, &QPushButton::clicked, this, &CacowardsTab::importExportedXml );
 	connect( tree_, &QTreeWidget::currentItemChanged, this, &CacowardsTab::onCurrentItemChanged );
 	connect( tree_, &QTreeWidget::itemChanged, this, &CacowardsTab::onItemChanged );
+	connect( tree_, &QTreeWidget::itemExpanded, this, [ this ]( QTreeWidgetItem * ){ onExpansionChanged(); } );
+	connect( tree_, &QTreeWidget::itemCollapsed, this, [ this ]( QTreeWidgetItem * ){ onExpansionChanged(); } );
 	connect( browseBtn_, &QPushButton::clicked, this, &CacowardsTab::browseTargetDir );
 	connect( downloadBtn_, &QPushButton::clicked, this, &CacowardsTab::downloadChecked );
 
@@ -269,6 +327,11 @@ void CacowardsTab::buildUi()
 	connect( autosortChk_, &QCheckBox::toggled, this, &CacowardsTab::autosortChanged );
 	connect( unpackChk_, &QCheckBox::toggled, this, &CacowardsTab::unpackChanged );
 	connect( deleteAfterExtractChk_, &QCheckBox::toggled, this, &CacowardsTab::deleteAfterExtractChanged );
+	connect( parallelChk_, &QCheckBox::toggled, this, [ this ]( bool enabled )
+	{
+		setParallelDownload( enabled );  // maxParallel_ = enabled ? 4 : 1
+		emit parallelDownloadChanged( enabled );
+	});
 
 	// "delete after extracting" only makes sense when unpacking is enabled
 	connect( unpackChk_, &QCheckBox::toggled, this, [ this ]( bool enabled )
@@ -313,7 +376,7 @@ void CacowardsTab::loadData()
 		return;
 	}
 
-	buildTree();
+	buildTree( /*restoreExpansion*/ true );
 	setStatus( QString( "Loaded %1 Cacowards entries (%2)." ).arg( entries_.size() ).arg( sourceDesc ) );
 }
 
@@ -347,9 +410,11 @@ bool CacowardsTab::loadDataFromJson( const QByteArray & json, QList< CacowardEnt
 	return !out.isEmpty();
 }
 
-void CacowardsTab::buildTree()
+void CacowardsTab::buildTree( bool restoreExpansion )
 {
 	tree_->clear();
+
+	// the tree is always built fully collapsed; the saved expansion state is applied only on purpose (e.g. on startup)
 
 	// make sure entries are ordered by year, then category, then title
 	std::sort( entries_.begin(), entries_.end(), []( const CacowardEntry & a, const CacowardEntry & b )
@@ -394,7 +459,41 @@ void CacowardsTab::buildTree()
 		leaf->setData( 0, Qt::UserRole, i );  // index into entries_
 	}
 
-	tree_->expandToDepth( 1 );  // show years and categories, keep wads collapsed
+	// everything is collapsed by default; optionally re-apply the expansion state saved in a previous run
+	if (restoreExpansion)
+	{
+		restoringExpansion_ = true;  // don't emit expansionChanged while programmatically restoring
+		applyExpansionState();
+		restoringExpansion_ = false;
+	}
+}
+
+void CacowardsTab::applyExpansionState()
+{
+	// re-expand the nodes that were expanded when the app was closed, ignoring entries that no longer exist
+	for (int i = 0; i < tree_->topLevelItemCount(); ++i)
+	{
+		QTreeWidgetItem * yearItem = tree_->topLevelItem( i );
+		const QString yearPath = yearItem->text( 0 );
+		if (expandedNodes_.contains( yearPath ))
+			yearItem->setExpanded( true );
+
+		for (int c = 0; c < yearItem->childCount(); ++c)
+		{
+			QTreeWidgetItem * catItem = yearItem->child( c );
+			const QString catPath = yearPath + '/' + catItem->text( 0 );
+			if (expandedNodes_.contains( catPath ))
+				catItem->setExpanded( true );
+		}
+	}
+}
+
+void CacowardsTab::onExpansionChanged()
+{
+	if (restoringExpansion_)
+		return;  // this was a programmatic change while restoring, not a user action
+
+	emit expansionChanged();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -434,6 +533,8 @@ void CacowardsTab::startNextRefreshYear()
 			return;
 		}
 		refreshResolveIdx_ = 0;
+		refreshNetworkSteps_ = 0;
+		refreshTimer_.start();
 		setStatus( QString( "Resolving %1 entries..." ).arg( refreshEntries_.size() ) );
 		startNextRefreshResolution();
 		return;
@@ -706,6 +807,8 @@ void CacowardsTab::importExportedXml()
 	refreshEntries_ = entries;
 	refreshResolveIdx_ = 0;
 	refreshResolvedCount_ = 0;
+	refreshNetworkSteps_ = 0;
+	refreshTimer_.start();
 
 	refreshBtn_->setEnabled( false );
 	importBtn_->setEnabled( false );
@@ -734,18 +837,25 @@ void CacowardsTab::startNextRefreshResolution()
 			if (!entry.dir.isEmpty() && !entry.filename.isEmpty())
 				resolved.append( entry );
 
+		// persist the list so that the user doesn't have to import the XML / refresh again next time
 		saveDataFile();
 		entries_ = resolved;
 		buildTree();
 
+		// the rebuilt tree is fully collapsed; let the launcher remember this expansion state
+		emit expansionChanged();
+
 		progressBar_->setVisible( false );
 		refreshBtn_->setEnabled( true );
 		importBtn_->setEnabled( true );
-		setStatus( QString( "Refreshed %1 Cacowards entries." ).arg( entries_.size() ) );
+		setStatus( QString( "Loaded and saved %1 Cacowards entries. The list is cached, so you don't need to import the XML again." ).arg( entries_.size() ) );
 		return;
 	}
 
 	const CacowardEntry & entry = refreshEntries_[ refreshResolveIdx_ ];
+
+	// show which entry is being reviewed and how much work is left
+	updateResolveProgress( entry );
 
 	QUrl url( kIdgamesApiBase );
 	QUrlQuery query;
@@ -788,8 +898,55 @@ void CacowardsTab::onRefreshIdResolved()
 	if (reply)
 		reply->deleteLater();
 
+	refreshNetworkSteps_++;
 	refreshResolveIdx_++;
 	startNextRefreshResolution();
+}
+
+void CacowardsTab::updateResolveProgress( const CacowardEntry & entry )
+{
+	const int total = refreshEntries_.size();
+	const int done = refreshResolveIdx_;                    // entries fully processed so far
+	const int current = refreshResolveIdx_ + 1;             // 1-based index of the entry being worked on
+
+	progressBar_->setVisible( true );
+	progressBar_->setRange( 0, total );
+	progressBar_->setValue( qBound( 0, done, total ) );
+
+	// count the entries that still need an idgames lookup (those already carrying a path are skipped for free)
+	int remaining = 0;
+	for (int i = refreshResolveIdx_; i < total; ++i)
+		if (refreshEntries_[ i ].dir.isEmpty() || refreshEntries_[ i ].filename.isEmpty())
+			++remaining;
+
+	const int percent = total > 0 ? int( done * 100.0 / total ) : 0;
+	const QString title = entry.title.isEmpty() ? entry.filename : entry.title;
+
+	QString status = QString( "Reviewing %1 of %2: %3 (%4%)" )
+		.arg( current ).arg( total ).arg( title ).arg( percent );
+
+	// estimate how long the rest will take based on the average time each API lookup took so far
+	if (refreshNetworkSteps_ > 0 && refreshTimer_.isValid())
+	{
+		const double msPerStep = double( refreshTimer_.elapsed() ) / refreshNetworkSteps_;
+		const qint64 etaMs = qint64( msPerStep * remaining + 0.5 );
+		status += QString( "  (~%1 left)" ).arg( formatRemainingEstimate( etaMs ) );
+	}
+
+	setStatus( status );
+}
+
+QString CacowardsTab::formatRemainingEstimate( qint64 ms )
+{
+	const qint64 seconds = qMax< qint64 >( 0, ms / 1000 );
+	if (seconds < 60)
+		return QStringLiteral( "%1s" ).arg( seconds );
+
+	const qint64 minutes = seconds / 60;
+	if (minutes < 60)
+		return QStringLiteral( "%1m %2s" ).arg( minutes ).arg( seconds % 60 );
+
+	return QStringLiteral( "%1h %2m" ).arg( minutes / 60 ).arg( minutes % 60 );
 }
 
 void CacowardsTab::saveDataFile()
@@ -928,11 +1085,8 @@ void CacowardsTab::downloadChecked()
 		return;
 	}
 
-	if (!ensureTargetDirExists())
-	{
-		setStatus( "Could not create the target directory." );
-		return;
-	}
+	if (!ensureTargetDirUsable())
+		return;  // a message has been shown, and possibly the target dir was switched to the map dir
 
 	QList< PendingDownload > allDownloads = collectCheckedDownloads();
 	if (allDownloads.isEmpty())
@@ -987,7 +1141,25 @@ void CacowardsTab::downloadChecked()
 
 void CacowardsTab::startNextDownload()
 {
-	if (pendingDownloads_.isEmpty())
+	// fill all free download slots up to the allowed parallelism
+	while (activeDownloads_.size() < size_t( maxParallel_ ) && !pendingDownloads_.isEmpty())
+	{
+		const PendingDownload next = pendingDownloads_.takeFirst();
+
+		auto download = std::make_unique< ActiveDownload >();
+		download->path = next.filePath;
+		download->title = next.title;
+		for (const char * base : kDownloadMirrors)
+			download->urls.append( QString::fromLatin1( base ) + next.relativePath );
+
+		ActiveDownload * raw = download.get();
+		activeDownloads_.push_back( std::move( download ) );
+		startDownload( raw );
+	}
+
+	updateDownloadProgress();
+
+	if (activeDownloads_.empty())
 	{
 		batchActive_ = false;
 		downloadCount_ = 0;
@@ -996,99 +1168,70 @@ void CacowardsTab::startNextDownload()
 		updateDownloadBtnState();
 		return;
 	}
-
-	const PendingDownload next = pendingDownloads_.takeFirst();
-
-	// build the candidate mirror URLs for this file, tried in order
-	downloadUrls_.clear();
-	for (const char * base : kDownloadMirrors)
-		downloadUrls_.append( QString::fromLatin1( base ) + next.relativePath );
-	downloadUrlIdx_ = 0;
-	downloadTitle_ = next.title;
-
-	startDownload( next.filePath );
 }
 
-void CacowardsTab::startDownload( const QString & filePath )
+void CacowardsTab::startDownload( ActiveDownload * download )
 {
-	if (downloadUrlIdx_ >= downloadUrls_.size())
+	if (download->urlIdx >= download->urls.size())
 		return;
 
-	const QString url = downloadUrls_[ downloadUrlIdx_ ];
+	const QString url = download->urls[ download->urlIdx ];
 
-	QUrl downloadUrl( url );
-	QNetworkRequest request( downloadUrl );
+	QNetworkRequest request{ QUrl( url ) };
 	request.setRawHeader( "User-Agent", kUserAgent );
 	request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
 
-	downloadReply_ = network_->get( request );
-	downloadPath_ = filePath;
-
 	// make sure the parent directory exists (it may be a nested autosort subfolder)
-	QDir().mkpath( QFileInfo( filePath ).absolutePath() );
+	QDir().mkpath( QFileInfo( download->path ).absolutePath() );
 
-	downloadFile_ = new QFile( filePath );
-	if (!downloadFile_->open( QIODevice::WriteOnly ))
+	QFile * file = new QFile( download->path );
+	if (!file->open( QIODevice::WriteOnly ))
 	{
-		setStatus( "Could not open \"" + filePath + "\" for writing." );
-		delete downloadFile_;
-		downloadFile_ = nullptr;
-		downloadPath_.clear();
-		downloadReply_->abort();
-		downloadReply_ = nullptr;
+		setStatus( "Could not open \"" + download->path + "\" for writing." );
+		delete file;
+		// free this slot and let the batch continue
+		removeDownload( download );
 		startNextDownload();
 		return;
 	}
+	download->file = file;
+
+	download->reply = network_->get( request );
 
 	// stream the incoming data directly to disk
-	connect( downloadReply_, &QNetworkReply::readyRead, this, [ this ]()
+	connect( download->reply, &QNetworkReply::readyRead, this, [ this, download ]()
 	{
-		if (downloadFile_ && downloadReply_)
-			downloadFile_->write( downloadReply_->readAll() );
+		if (download->file && download->reply)
+			download->file->write( download->reply->readAll() );
 	});
 
-	connect( downloadReply_, &QNetworkReply::downloadProgress, this, [ this ]( qint64 received, qint64 total )
+	connect( download->reply, &QNetworkReply::finished, this, [ this, download ]()
 	{
-		if (total > 0)
-		{
-			progressBar_->setRange( 0, 100 );
-			progressBar_->setValue( int( received * 100 / total ) );
-		}
-		else
-		{
-			progressBar_->setRange( 0, 0 );
-		}
+		onDownloadFinished( download );
 	});
 
-	connect( downloadReply_, &QNetworkReply::finished, this, &CacowardsTab::onDownloadFinished );
-
-	progressBar_->setVisible( true );
-	progressBar_->setRange( 0, 0 );
 	downloadBtn_->setEnabled( false );
+	updateDownloadProgress();
 
-	int currentIdx = downloadCount_ - pendingDownloads_.size();
-	QString batchInfo = downloadCount_ > 0 ? QString( " [%1/%2]" ).arg( currentIdx ).arg( downloadCount_ ) : QString();
-	setStatus( QString( "Downloading \"%1\"%2 (mirror %3/%4) ..." )
-		.arg( QFileInfo( filePath ).fileName() )
-		.arg( batchInfo )
-		.arg( downloadUrlIdx_ + 1 )
-		.arg( downloadUrls_.size() ) );
+	const int startedCnt = downloadCount_ - pendingDownloads_.size() - activeDownloads_.size() + 1;
+	QString batchInfo = downloadCount_ > 0 ? QString( " [%1/%2]" ).arg( startedCnt ).arg( downloadCount_ ) : QString();
+	setStatus( QString( "Downloading \"%1\"%2 ..." )
+		.arg( QFileInfo( download->path ).fileName() )
+		.arg( batchInfo ) );
 }
 
-void CacowardsTab::onDownloadFinished()
+void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 {
-	QNetworkReply * reply = downloadReply_;
-	downloadReply_ = nullptr;
+	QNetworkReply * reply = download->reply;
+	download->reply = nullptr;
 
 	// flush whatever remains in the reply's buffer
-	if (downloadFile_)
+	if (download->file)
 	{
 		if (reply)
-			downloadFile_->write( reply->readAll() );
-		downloadFile_->close();
+			download->file->write( reply->readAll() );
+		download->file->close();
 	}
-
-	progressBar_->setVisible( false );
 
 	QString errorString;
 	bool success = true;
@@ -1099,61 +1242,105 @@ void CacowardsTab::onDownloadFinished()
 		reply->deleteLater();
 	}
 
-	delete downloadFile_;
-	downloadFile_ = nullptr;
-
-	const QString savedPath = downloadPath_;
-	downloadPath_.clear();
-
-	const QString savedTitle = downloadTitle_;
-	downloadTitle_.clear();
+	const QString savedPath = download->path;
+	const QString savedTitle = download->title;
 
 	if (success)
 	{
+		if (download->file)
+		{
+			download->file->deleteLater();
+			download->file = nullptr;
+		}
+
 		if (unpackChk_->isChecked())
 		{
+			// Unpack in a background worker thread so that the UI stays responsive
+			// and multiple downloads/unpacks can run at the same time.
 			const QFileInfo savedInfo( savedPath );
 			const QString title = savedTitle.trimmed();
 			const QString folderName = title.isEmpty() ? savedInfo.completeBaseName() : sanitizeFileName( title );
-			const QString extractDir = savedInfo.dir().filePath( folderName );
+			download->extractDir = savedInfo.dir().filePath( folderName );
 
-			if (extractZipArchive( savedPath, extractDir ))
+			download->unpackWatcher = new QFutureWatcher< bool >( this );
+			connect( download->unpackWatcher, &QFutureWatcher< bool >::finished, this, [ this, download ]()
 			{
-				if (deleteAfterExtractChk_->isChecked())
-					QFile::remove( savedPath );
+				onUnpackFinished( download );
+			});
 
-				setStatus( "Unpacked to \"" + extractDir + "\"." );
-				emit downloadFinished( extractDir );
-			}
-			else
+			const QString zipPath = savedPath;
+			const QString extractDir = download->extractDir;
+			download->unpackWatcher->setFuture( QtConcurrent::run( [ zipPath, extractDir ]()
 			{
-				setStatus( "Downloaded to \"" + savedPath + "\", but unpacking failed." );
-				emit downloadFinished( savedPath );
-			}
+				return extractZipArchive( zipPath, extractDir );
+			}) );
+
+			setStatus( "Unpacking \"" + extractDir + "\" ..." );
+			downloadBtn_->setEnabled( false );
+			updateDownloadProgress();
+			return;  // the download slot stays occupied until the unpacking finishes
 		}
 		else
 		{
 			setStatus( "Downloaded to \"" + savedPath + "\"." );
 			emit downloadFinished( savedPath );
 		}
-		startNextDownload();
-		return;
 	}
-
-	// remove the partially-written file
-	if (!savedPath.isEmpty())
-		QFile::remove( savedPath );
-
-	// try the next mirror, if there is one
-	++downloadUrlIdx_;
-	if (downloadUrlIdx_ < downloadUrls_.size())
+	else
 	{
-		setStatus( "Mirror failed (" + errorString + "), trying the next one ..." );
-		startDownload( savedPath );
-		return;
+		// remove the partially-written file
+		if (!savedPath.isEmpty())
+			QFile::remove( savedPath );
+
+		if (download->file)
+		{
+			download->file->deleteLater();
+			download->file = nullptr;
+		}
+
+		// try the next mirror, if there is one
+		++download->urlIdx;
+		if (download->urlIdx < download->urls.size())
+		{
+			setStatus( "Mirror failed (" + errorString + "), trying the next one ..." );
+			startDownload( download );
+			return;
+		}
+
+		setStatus( "Download failed: " + errorString );
 	}
 
-	setStatus( "Download failed: " + errorString );
+	updateDownloadProgress();
+	removeDownload( download );
+	startNextDownload();
+}
+
+void CacowardsTab::onUnpackFinished( ActiveDownload * download )
+{
+	QFutureWatcher< bool > * watcher = download->unpackWatcher;
+	download->unpackWatcher = nullptr;
+	const bool unpackSucceeded = watcher->result();
+	watcher->deleteLater();
+
+	const QString savedPath = download->path;
+	const QString extractDir = download->extractDir;
+
+	if (unpackSucceeded)
+	{
+		if (deleteAfterExtractChk_->isChecked())
+			QFile::remove( savedPath );
+
+		setStatus( "Unpacked to \"" + extractDir + "\"." );
+		emit downloadFinished( extractDir );
+	}
+	else
+	{
+		setStatus( "Downloaded to \"" + savedPath + "\", but unpacking failed." );
+		emit downloadFinished( savedPath );
+	}
+
+	updateDownloadProgress();
+	removeDownload( download );
 	startNextDownload();
 }
 
@@ -1175,17 +1362,71 @@ QString CacowardsTab::sanitizeFileName( const QString & fileName ) const
 	return name;
 }
 
-bool CacowardsTab::ensureTargetDirExists()
+bool CacowardsTab::ensureTargetDirUsable()
 {
 	const QString dir = targetDir();
 	if (dir.isEmpty())
 		return false;
 
-	QDir target( dir );
-	if (target.exists())
-		return true;
+	// create it if it doesn't exist yet
+	if (!QFileInfo::exists( dir ))
+	{
+		if (!QDir().mkpath( dir ))
+			return askToUseMapDir( dir );
+	}
 
-	return target.mkpath( "." );
+	// it must also be writable for the downloaded files to be saved into it
+	if (!fs::isDirectoryWritable( dir ))
+		return askToUseMapDir( dir );
+
+	return true;
+}
+
+bool CacowardsTab::askToUseMapDir( const QString & targetDir )
+{
+	if (!mapSourceDir_.isEmpty() && QFileInfo::exists( mapSourceDir_ ) && fs::isDirectoryWritable( mapSourceDir_ ))
+	{
+		const auto answer = QMessageBox::question(
+			this, "Target directory not usable",
+			"Target directory \"" + targetDir + "\" is not accessible for writing.\n\n"
+			"Use your map directory \"" + mapSourceDir_ + "\" as the download target instead?",
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+		);
+		if (answer == QMessageBox::Yes)
+		{
+			targetDirLine_->setText( mapSourceDir_ );  // also re-saves the target dir preference
+			return true;
+		}
+		return false;
+	}
+
+	QMessageBox::warning( this, "Target directory not usable",
+		"Target directory \"" + targetDir + "\" is not accessible for writing.\n"
+		"Please choose another directory." );
+	return false;
+}
+
+void CacowardsTab::removeDownload( ActiveDownload * download )
+{
+	for (size_t i = 0; i < activeDownloads_.size(); ++i)
+	{
+		if (activeDownloads_[ i ].get() == download)
+		{
+			activeDownloads_.erase( activeDownloads_.begin() + qsizetype( i ) );
+			return;
+		}
+	}
+}
+
+void CacowardsTab::updateDownloadProgress()
+{
+	if (downloadCount_ <= 0)
+		return;
+
+	const int completed = downloadCount_ - pendingDownloads_.size() - int( activeDownloads_.size() );
+	progressBar_->setVisible( true );
+	progressBar_->setRange( 0, downloadCount_ );
+	progressBar_->setValue( qBound( 0, completed, downloadCount_ ) );
 }
 
 void CacowardsTab::setStatus( const QString & text )

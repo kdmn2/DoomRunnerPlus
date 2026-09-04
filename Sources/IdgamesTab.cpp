@@ -7,6 +7,8 @@
 
 #include "IdgamesTab.hpp"
 
+#include "Utils/FileSystemUtils.hpp"  // isDirectoryWritable
+
 #include <QLineEdit>
 #include <QPushButton>
 #include <QComboBox>
@@ -98,6 +100,11 @@ void IdgamesTab::setTargetDir( const QString & dir )
 QString IdgamesTab::targetDir() const
 {
 	return targetDirLine_->text().trimmed();
+}
+
+void IdgamesTab::setMapSourceDir( const QString & dir )
+{
+	mapSourceDir_ = dir;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -492,11 +499,8 @@ void IdgamesTab::downloadChecked()
 		return;
 	}
 
-	if (!ensureTargetDirExists())
-	{
-		setStatus( "Could not create the target directory." );
-		return;
-	}
+	if (!ensureTargetDirUsable())
+		return;  // a message has been shown, and possibly the target dir was switched to the map dir
 
 	// build the list of files to download, checking which already exist
 	QList< PendingDownload > allDownloads;
@@ -709,17 +713,48 @@ QString IdgamesTab::sanitizeFileName( const QString & fileName ) const
 	return name;
 }
 
-bool IdgamesTab::ensureTargetDirExists()
+bool IdgamesTab::ensureTargetDirUsable()
 {
 	const QString dir = targetDir();
 	if (dir.isEmpty())
 		return false;
 
-	QDir target( dir );
-	if (target.exists())
-		return true;
+	// create it if it doesn't exist yet
+	if (!QFileInfo::exists( dir ))
+	{
+		if (!QDir().mkpath( dir ))
+			return askToUseMapDir( dir );
+	}
 
-	return target.mkpath( "." );
+	// it must also be writable for the downloaded files to be saved into it
+	if (!fs::isDirectoryWritable( dir ))
+		return askToUseMapDir( dir );
+
+	return true;
+}
+
+bool IdgamesTab::askToUseMapDir( const QString & targetDir )
+{
+	if (!mapSourceDir_.isEmpty() && QFileInfo::exists( mapSourceDir_ ) && fs::isDirectoryWritable( mapSourceDir_ ))
+	{
+		const auto answer = QMessageBox::question(
+			this, "Target directory not usable",
+			"Target directory \"" + targetDir + "\" is not accessible for writing.\n\n"
+			"Use your map directory \"" + mapSourceDir_ + "\" as the download target instead?",
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes
+		);
+		if (answer == QMessageBox::Yes)
+		{
+			targetDirLine_->setText( mapSourceDir_ );  // also re-saves the target dir preference
+			return true;
+		}
+		return false;
+	}
+
+	QMessageBox::warning( this, "Target directory not usable",
+		"Target directory \"" + targetDir + "\" is not accessible for writing.\n"
+		"Please choose another directory." );
+	return false;
 }
 
 void IdgamesTab::setStatus( const QString & text )
