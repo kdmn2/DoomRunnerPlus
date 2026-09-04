@@ -14,6 +14,8 @@
 #include <QTreeWidgetItem>
 #include <QTreeWidgetItemIterator>
 #include <QTextEdit>
+#include <QPlainTextEdit>
+#include <QScrollBar>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QCheckBox>
@@ -36,6 +38,7 @@
 #include <QRegularExpression>
 #include <QDate>
 #include <QDesktopServices>
+#include <QTime>
 #include <QXmlStreamReader>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -288,6 +291,21 @@ void CacowardsTab::buildUi()
 	optionsRow->addWidget( deleteAfterExtractChk_ );
 	optionsRow->addWidget( parallelChk_ );
 
+	//-- activity log -----------------------------------------------------------
+
+	logChk_ = new QCheckBox( "Show log", this );
+	logChk_->setToolTip( "Show a log of list loading/importing, downloads and extraction events" );
+
+	logView_ = new QPlainTextEdit( this );
+	logView_->setReadOnly( true );
+	logView_->setPlaceholderText( "No activity logged yet." );
+	logView_->setMinimumHeight( 140 );
+	logView_->setVisible( false );  // hidden until the "Show log" checkbox is enabled
+
+	QHBoxLayout * logRow = new QHBoxLayout;
+	logRow->addStretch( 1 );
+	logRow->addWidget( logChk_ );
+
 	//-- status bar -------------------------------------------------------------
 
 	statusLabel_ = new QLabel( "Loading Cacowards data...", this );
@@ -303,6 +321,8 @@ void CacowardsTab::buildUi()
 	mainLayout->addWidget( treePanel, 1 );
 	mainLayout->addLayout( downloadRow );
 	mainLayout->addLayout( optionsRow );
+	mainLayout->addLayout( logRow );
+	mainLayout->addWidget( logView_ );
 	mainLayout->addWidget( progressBar_ );
 	mainLayout->addWidget( statusLabel_ );
 
@@ -338,6 +358,11 @@ void CacowardsTab::buildUi()
 	{
 		deleteAfterExtractChk_->setEnabled( enabled );
 	});
+
+	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		logView_->setVisible( checked );
+	});
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -372,12 +397,14 @@ void CacowardsTab::loadData()
 	{
 		entries_.clear();
 		setStatus( "No Cacowards data available. Click \"Refresh\" to download the list." );
+		logMessage( "No Cacowards data available. Click Refresh to download the list." );
 		buildTree();
 		return;
 	}
 
 	buildTree( /*restoreExpansion*/ true );
 	setStatus( QString( "Loaded %1 Cacowards entries (%2)." ).arg( entries_.size() ).arg( sourceDesc ) );
+	logMessage( QString( "Loaded %1 Cacowards entries from %2." ).arg( entries_.size() ).arg( sourceDesc ) );
 }
 
 bool CacowardsTab::loadDataFromJson( const QByteArray & json, QList< CacowardEntry > & out ) const
@@ -516,7 +543,8 @@ void CacowardsTab::refresh()
 	importBtn_->setEnabled( false );
 	progressBar_->setVisible( true );
 	progressBar_->setRange( 0, 0 );
-	setStatus( "Refreshing Cacowards list..." );
+		setStatus( "Refreshing Cacowards list..." );
+		logMessage( QString( "Refreshing Cacowards list from doomwiki (years %1-%2)..." ).arg( 2004 ).arg( QDate::currentDate().year() ) );
 
 	startNextRefreshYear();
 }
@@ -536,6 +564,7 @@ void CacowardsTab::startNextRefreshYear()
 		refreshNetworkSteps_ = 0;
 		refreshTimer_.start();
 		setStatus( QString( "Resolving %1 entries..." ).arg( refreshEntries_.size() ) );
+		logMessage( QString( "All years fetched; resolving download paths for %1 entries..." ).arg( refreshEntries_.size() ) );
 		startNextRefreshResolution();
 		return;
 	}
@@ -563,13 +592,20 @@ void CacowardsTab::onRefreshYearFetched()
 	if (reply)
 	{
 		const bool ok = reply->error() == QNetworkReply::NoError;
+		const QString errorString = reply->errorString();
 		const QByteArray data = reply->readAll();
 		reply->deleteLater();
 
 		if (ok)
 		{
 			const QString html = QString::fromUtf8( data );
+			const int before = refreshEntries_.size();
 			parseCacowardsHtml( year, html, refreshEntries_ );
+			logMessage( QString( "Fetched Cacowards %1 (%2 entries)." ).arg( year ).arg( refreshEntries_.size() - before ) );
+		}
+		else
+		{
+			logMessage( QString( "Failed to fetch Cacowards %1: %2" ).arg( year ).arg( errorString ) );
 		}
 		// a failed year (404 for a year that doesn't exist, or a blocked request) is simply skipped
 	}
@@ -780,6 +816,7 @@ void CacowardsTab::generateList()
 {
 	openBrowserExportPage();
 	setStatus( "Opened doomwiki's export page in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
+	logMessage( "Opened doomwiki's export page in your browser." );
 }
 
 void CacowardsTab::importExportedXml()
@@ -792,6 +829,7 @@ void CacowardsTab::importExportedXml()
 	if (!file.open( QIODevice::ReadOnly ))
 	{
 		setStatus( "Could not open \"" + filePath + "\"." );
+		logMessage( "Import failed: could not open \"" + filePath + "\"." );
 		return;
 	}
 
@@ -801,8 +839,11 @@ void CacowardsTab::importExportedXml()
 	if (entries.isEmpty())
 	{
 		setStatus( "No Cacowards entries found in \"" + filePath + "\"." );
+		logMessage( "Import failed: no Cacowards entries found in \"" + filePath + "\"." );
 		return;
 	}
+
+	logMessage( QString( "Imported %1 entries from \"%2\"; resolving download paths..." ).arg( entries.size() ).arg( filePath ) );
 
 	refreshEntries_ = entries;
 	refreshResolveIdx_ = 0;
@@ -849,6 +890,7 @@ void CacowardsTab::startNextRefreshResolution()
 		refreshBtn_->setEnabled( true );
 		importBtn_->setEnabled( true );
 		setStatus( QString( "Loaded and saved %1 Cacowards entries. The list is cached, so you don't need to import the XML again." ).arg( entries_.size() ) );
+		logMessage( QString( "Done: resolved and saved %1 Cacowards entries." ).arg( entries_.size() ) );
 		return;
 	}
 
@@ -975,6 +1017,7 @@ void CacowardsTab::saveDataFile()
 	{
 		file.write( QJsonDocument( arr ).toJson( QJsonDocument::Indented ) );
 		file.close();
+		logMessage( "Saved Cacowards list to \"" + dataFilePath_ + "\"." );
 	}
 }
 
@@ -1108,10 +1151,12 @@ void CacowardsTab::downloadChecked()
 			for (const PendingDownload & d : allDownloads)
 				if (!QFile::exists( d.filePath ))
 					pendingDownloads_.append( d );
+			logMessage( QString( "%1 file(s) already exist and will be skipped." ).arg( existingNames.size() ) );
 		}
 		else
 		{
 			pendingDownloads_ = allDownloads;
+			logMessage( QString( "%1 file(s) already exist and will be overwritten." ).arg( existingNames.size() ) );
 		}
 	}
 	else
@@ -1122,8 +1167,14 @@ void CacowardsTab::downloadChecked()
 	if (pendingDownloads_.isEmpty())
 	{
 		setStatus( "Nothing to download (all selected files already exist)." );
+		logMessage( "Nothing to download - all selected files already exist." );
 		return;
 	}
+
+	logMessage( QString( "Starting download of %1 file(s) to \"%2\"%3." )
+		.arg( pendingDownloads_.size() )
+		.arg( targetDir() )
+		.arg( autosortChk_->isChecked() ? " (autosort)" : "" ) );
 
 	batchActive_ = true;
 	downloadCount_ = pendingDownloads_.size();
@@ -1158,6 +1209,7 @@ void CacowardsTab::startNextDownload()
 		downloadCount_ = 0;
 		progressBar_->setVisible( false );
 		setStatus( "All downloads finished." );
+		logMessage( "All downloads finished." );
 		updateDownloadBtnState();
 		return;
 	}
@@ -1181,6 +1233,7 @@ void CacowardsTab::startDownload( ActiveDownload * download )
 	if (!file->open( QIODevice::WriteOnly ))
 	{
 		setStatus( "Could not open \"" + download->path + "\" for writing." );
+		logMessage( "Download failed: could not open \"" + download->path + "\" for writing." );
 		delete file;
 		// free this slot and let the batch continue
 		removeDownload( download );
@@ -1209,6 +1262,9 @@ void CacowardsTab::startDownload( ActiveDownload * download )
 	const int startedCnt = downloadCount_ - pendingDownloads_.size() - activeDownloads_.size() + 1;
 	QString batchInfo = downloadCount_ > 0 ? QString( " [%1/%2]" ).arg( startedCnt ).arg( downloadCount_ ) : QString();
 	setStatus( QString( "Downloading \"%1\"%2 ..." )
+		.arg( QFileInfo( download->path ).fileName() )
+		.arg( batchInfo ) );
+	logMessage( QString( "Downloading \"%1\"%2 ..." )
 		.arg( QFileInfo( download->path ).fileName() )
 		.arg( batchInfo ) );
 }
@@ -1246,6 +1302,18 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 			download->file = nullptr;
 		}
 
+		// sanity check: a successful download must not produce an empty file
+		if (QFileInfo( savedPath ).size() <= 0)
+		{
+			success = false;
+			errorString = "downloaded file is empty";
+		}
+	}
+
+	if (success)
+	{
+		logMessage( QString( "Downloaded \"%1\" (%2 bytes)." ).arg( savedPath ).arg( QFileInfo( savedPath ).size() ) );
+
 		if (unpackChk_->isChecked())
 		{
 			// Unpack in a background worker thread so that the UI stays responsive
@@ -1269,6 +1337,7 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 			}) );
 
 			setStatus( "Unpacking \"" + extractDir + "\" ..." );
+			logMessage( "Unpacking \"" + zipPath + "\" into \"" + extractDir + "\" ..." );
 			downloadBtn_->setEnabled( false );
 			updateDownloadProgress();
 			return;  // the download slot stays occupied until the unpacking finishes
@@ -1281,7 +1350,10 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 	}
 	else
 	{
-		// remove the partially-written file
+		if (errorString.isEmpty())
+			errorString = "download failed";
+
+		// remove the partially-written / empty file
 		if (!savedPath.isEmpty())
 			QFile::remove( savedPath );
 
@@ -1296,11 +1368,13 @@ void CacowardsTab::onDownloadFinished( ActiveDownload * download )
 		if (download->urlIdx < download->urls.size())
 		{
 			setStatus( "Mirror failed (" + errorString + "), trying the next one ..." );
+			logMessage( QString( "Mirror failed for \"%1\" (%2); trying the next mirror." ).arg( QFileInfo( savedPath ).fileName() ).arg( errorString ) );
 			startDownload( download );
 			return;
 		}
 
 		setStatus( "Download failed: " + errorString );
+		logMessage( QString( "Failed to download \"%1\": %2" ).arg( QFileInfo( savedPath ).fileName() ).arg( errorString ) );
 	}
 
 	updateDownloadProgress();
@@ -1321,14 +1395,19 @@ void CacowardsTab::onUnpackFinished( ActiveDownload * download )
 	if (unpackSucceeded)
 	{
 		if (deleteAfterExtractChk_->isChecked())
+		{
 			QFile::remove( savedPath );
+			logMessage( "Deleted the archive \"" + savedPath + "\"." );
+		}
 
 		setStatus( "Unpacked to \"" + extractDir + "\"." );
+		logMessage( "Unpacked \"" + savedPath + "\" into \"" + extractDir + "\" successfully." );
 		emit downloadFinished( extractDir );
 	}
 	else
 	{
 		setStatus( "Downloaded to \"" + savedPath + "\", but unpacking failed." );
+		logMessage( "Unpacking failed for \"" + savedPath + "\" (the archive was downloaded but not extracted)." );
 		emit downloadFinished( savedPath );
 	}
 
@@ -1382,8 +1461,10 @@ bool CacowardsTab::ensureTargetDirUsable()
 		{
 			QMessageBox::warning( this, "Target directory not usable",
 				"Target directory \"" + dir + "\" is not accessible for writing.\nPlease choose another directory." );
+			logMessage( "Target directory \"" + dir + "\" could not be created." );
 			return false;
 		}
+		logMessage( "Created target directory \"" + dir + "\"." );
 	}
 
 	// it must also be writable for the downloaded files to be saved into it
@@ -1391,6 +1472,7 @@ bool CacowardsTab::ensureTargetDirUsable()
 	{
 		QMessageBox::warning( this, "Target directory not usable",
 			"Target directory \"" + dir + "\" is not accessible for writing.\nPlease choose another directory." );
+		logMessage( "Target directory \"" + dir + "\" is not writable." );
 		return false;
 	}
 
@@ -1414,6 +1496,7 @@ bool CacowardsTab::askToUseMapDir( const QString & targetDir )
 		if (answer == QMessageBox::Yes)
 		{
 			targetDirLine_->setText( mapSourceDir_ );  // also re-saves the target dir preference
+			logMessage( "Switched the download target to the map directory \"" + mapSourceDir_ + "\"." );
 			return true;
 		}
 	}
@@ -1447,4 +1530,13 @@ void CacowardsTab::updateDownloadProgress()
 void CacowardsTab::setStatus( const QString & text )
 {
 	statusLabel_->setText( text );
+}
+
+void CacowardsTab::logMessage( const QString & message )
+{
+	logView_->appendPlainText( QString( "[%1] %2" ).arg( QTime::currentTime().toString( "HH:mm:ss" ) ).arg( message ) );
+
+	// keep the log scrolled to the newest entry
+	if (QScrollBar * bar = logView_->verticalScrollBar())
+		bar->setValue( bar->maximum() );
 }

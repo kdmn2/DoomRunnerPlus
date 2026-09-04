@@ -23,6 +23,7 @@
 class QTreeWidget;
 class QTreeWidgetItem;
 class QTextEdit;
+class QPlainTextEdit;
 class QLineEdit;
 class QPushButton;
 class QCheckBox;
@@ -160,6 +161,7 @@ class CacowardsTab : public QWidget {
 	void buildTree( bool restoreExpansion = false );
 	void applyExpansionState();
 	void setStatus( const QString & text );
+	void logMessage( const QString & message );
 	QString sanitizeFileName( const QString & fileName ) const;
 	QList< PendingDownload > collectCheckedDownloads() const;
 	bool ensureTargetDirUsable();
@@ -219,8 +221,10 @@ class CacowardsTab : public QWidget {
 	QCheckBox * unpackChk_ = nullptr;
 	QCheckBox * deleteAfterExtractChk_ = nullptr;
 	QCheckBox * parallelChk_ = nullptr;
+	QCheckBox * logChk_ = nullptr;          ///< toggles visibility of the activity log
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
+	QPlainTextEdit * logView_ = nullptr;    ///< scrollable activity log (hidden by default)
 	QString dataFilePath_;
 	QString mapSourceDir_;   ///< directory used as the source of map packs (suggested as a fallback download target)
 
