@@ -428,9 +428,8 @@ bool CacowardsTab::loadDataFromJson( const QByteArray & json, QList< CacowardEnt
 		entry.dir      = obj[ "dir" ].toString();
 		entry.filename = obj[ "filename" ].toString();
 
-		if (entry.dir.isEmpty() || entry.filename.isEmpty())
-			continue;  // not downloadable
-
+		// keep entries that carry no download path too, so imported years stay visible
+		// even when the /idgames API couldn't be reached to resolve an id
 		out.append( entry );
 	}
 
@@ -870,17 +869,18 @@ void CacowardsTab::startNextRefreshResolution()
 		refreshResolveIdx_++;
 	}
 
-	// all entries processed - drop any that still couldn't be resolved (they have no download path)
+	// all entries processed - keep every entry (even ones that couldn't be resolved),
+	// so that all years/entries remain visible; unresolved ones are just not downloadable
 	if (refreshResolveIdx_ >= refreshEntries_.size())
 	{
-		QList< CacowardEntry > resolved;
+		int unresolved = 0;
 		for (const CacowardEntry & entry : refreshEntries_)
-			if (!entry.dir.isEmpty() && !entry.filename.isEmpty())
-				resolved.append( entry );
+			if (entry.dir.isEmpty() || entry.filename.isEmpty())
+				++unresolved;
 
 		// persist the list so that the user doesn't have to import the XML / refresh again next time
+		entries_ = refreshEntries_;
 		saveDataFile();
-		entries_ = resolved;
 		buildTree();
 
 		// the rebuilt tree is fully collapsed; let the launcher remember this expansion state
@@ -890,7 +890,10 @@ void CacowardsTab::startNextRefreshResolution()
 		refreshBtn_->setEnabled( true );
 		importBtn_->setEnabled( true );
 		setStatus( QString( "Loaded and saved %1 Cacowards entries. The list is cached, so you don't need to import the XML again." ).arg( entries_.size() ) );
-		logMessage( QString( "Done: resolved and saved %1 Cacowards entries." ).arg( entries_.size() ) );
+		if (unresolved > 0)
+			logMessage( QString( "Done: %1 entries kept, of which %2 could not be resolved to a download path (the /idgames API may have been unreachable); they are listed but not downloadable." ).arg( entries_.size() ).arg( unresolved ) );
+		else
+			logMessage( QString( "Done: resolved and saved %1 Cacowards entries." ).arg( entries_.size() ) );
 		return;
 	}
 
@@ -935,7 +938,19 @@ void CacowardsTab::onRefreshIdResolved()
 				refreshEntries_[ refreshResolveIdx_ ].filename = filename;
 				refreshResolvedCount_++;
 			}
+			else if (refreshResolveIdx_ < refreshEntries_.size())
+			{
+				logMessage( QString( "Could not resolve \"%1\" (%2) - no download path returned." )
+					.arg( refreshEntries_[ refreshResolveIdx_ ].title ).arg( refreshEntries_[ refreshResolveIdx_ ].id ) );
+			}
 		}
+	}
+	else if (refreshResolveIdx_ < refreshEntries_.size())
+	{
+		logMessage( QString( "Could not resolve \"%1\" (%2): %3" )
+			.arg( refreshEntries_[ refreshResolveIdx_ ].title )
+			.arg( refreshEntries_[ refreshResolveIdx_ ].id )
+			.arg( reply ? reply->errorString() : QStringLiteral("no reply") ) );
 	}
 	if (reply)
 		reply->deleteLater();
@@ -999,9 +1014,6 @@ void CacowardsTab::saveDataFile()
 	QJsonArray arr;
 	for (const CacowardEntry & entry : refreshEntries_)
 	{
-		if (entry.dir.isEmpty() || entry.filename.isEmpty())
-			continue;
-
 		QJsonObject obj;
 		obj[ "year" ] = entry.year;
 		obj[ "category" ] = entry.category;
@@ -1087,6 +1099,11 @@ QList< CacowardsTab::PendingDownload > CacowardsTab::collectCheckedDownloads() c
 			continue;
 
 		const CacowardEntry & entry = entries_[ idx ];
+
+		// entries without a download path (id could not be resolved) can't be downloaded
+		if (entry.filename.isEmpty())
+			continue;
+
 		const QString fileName = sanitizeFileName( entry.filename );
 
 		QString subDir;
