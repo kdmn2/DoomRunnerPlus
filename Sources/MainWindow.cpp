@@ -30,6 +30,8 @@
 #include "IdgamesTab.hpp"
 #include "CacowardsTab.hpp"
 
+#include <QTabWidget>
+
 #include "Utils/LangUtils.hpp"
 #include "Utils/ContainerUtils.hpp"
 #include "Utils/StringUtils.hpp"
@@ -928,12 +930,14 @@ MainWindow::MainWindow()
 	setupModList();
 	setupEnvVarLists();
 
-	// setup the /idgames download tab
+	// setup the /idgames and Cacowards download tabs, grouped under a single "WAD Downloader" tab
+
+	QTabWidget * downloaderTabs = new QTabWidget( this );
 
 	idgamesTab = new IdgamesTab( this );
 	applyIdgamesSettings();
-	int idgamesTabIdx = ui->tabWidget->addTab( idgamesTab, "IdGames" );
-	ui->tabWidget->setTabToolTip( idgamesTabIdx, "Browse and download WADs/ZIPs from the Doomworld /idgames archive" );
+	int idgamesTabIdx = downloaderTabs->addTab( idgamesTab, "IdGames" );
+	downloaderTabs->setTabToolTip( idgamesTabIdx, "Browse and download WADs/ZIPs from the Doomworld /idgames archive" );
 	connect( idgamesTab, &IdgamesTab::downloadFinished, this, &ThisClass::addDownloadedMod );
 	connect( idgamesTab, &IdgamesTab::targetDirChanged, this, [ this ]( const QString & dir )
 	{
@@ -945,8 +949,8 @@ MainWindow::MainWindow()
 
 	cacowardsTab = new CacowardsTab( this );
 	applyCacowardsSettings();
-	int cacowardsTabIdx = ui->tabWidget->addTab( cacowardsTab, "Cacowards" );
-	ui->tabWidget->setTabToolTip( cacowardsTabIdx, "Browse and download Cacowards-awarded WADs from /idgames" );
+	int cacowardsTabIdx = downloaderTabs->addTab( cacowardsTab, "Cacowards" );
+	downloaderTabs->setTabToolTip( cacowardsTabIdx, "Browse and download Cacowards-awarded WADs from /idgames" );
 	// Cacowards downloads should NOT automatically add the file to the mod list.
 	connect( cacowardsTab, &CacowardsTab::targetDirChanged, this, [ this ]( const QString & dir )
 	{
@@ -978,6 +982,10 @@ MainWindow::MainWindow()
 		modSettings.cacowardsParallel = enabled;
 		scheduleSavingOptions();
 	});
+
+	// group both download tabs under the top-level "WAD Downloader" tab
+	int downloadTabIdx = ui->tabWidget->addTab( downloaderTabs, "WAD Downloader" );
+	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive and the Cacowards" );
 
 	// setup combo-boxes
 
