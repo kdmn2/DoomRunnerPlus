@@ -48,6 +48,7 @@
 #include <memory>    // std::make_unique
 
 #include <algorithm>
+#include <random>
 
 
 //======================================================================================================================
@@ -68,9 +69,30 @@ constexpr const char * kWaybackYearPrefix = "https://web.archive.org/web/2025/ht
   * certificate has expired, so we use direct mirrors that serve the raw files instead. */
 constexpr const char * kDownloadMirrors [] = {
 	"https://youfailit.net/pub/idgames/",
+	"https://www.gamers.org/pub/idgames/",
 	"https://ftp.gamers.org/pub/idgames/",
-	"https://www.gamers.org/pub/idgames/",   // same archive as ftp.gamers.org, extra fallback
+	"https://ftp.fu-berlin.de/pc/games/idgames/",
+	"https://idgames.planetzdoom.com/",
+	"https://files.xvertigox.com/idgames/",
+	"https://mirror.braindrainlan.nu/pub/idgames/",
+	"https://lethe.chinstrap.org/idgames/",
+	"https://mirrors.lug.mtu.edu/idgames/",
+	"https://ftpmirror1.infania.net/pub/idgames/",
 };
+
+/// Returns the mirror prefixes in a random order, so parallel downloads don't all hit the same mirror.
+QStringList shuffledMirrors()
+{
+	QStringList bases;
+	bases.reserve( int( std::size(kDownloadMirrors) ) );
+	for (const char * base : kDownloadMirrors)
+		bases.append( QString::fromLatin1( base ) );
+
+	std::random_device rd;
+	std::mt19937 rng( rd() );
+	std::shuffle( bases.begin(), bases.end(), rng );
+	return bases;
+}
 
 /// Maps a doomwiki section heading to one of the supported award categories.
 /** Returns an empty string for headings that do not represent an award section. */
@@ -117,6 +139,8 @@ CacowardsTab::~CacowardsTab()
 	{
 		if (download->reply)
 			download->reply->abort();
+		if (download->resolveReply)
+			download->resolveReply->abort();
 		delete download->file;
 	}
 	if (refreshReply_)
@@ -1110,9 +1134,14 @@ QList< CacowardsTab::PendingDownload > CacowardsTab::collectCheckedDownloads() c
 
 		const CacowardEntry & entry = entries_[ idx ];
 
-		// entries without a download path (id could not be resolved) can't be downloaded
+		// Entries carrying only an /idgames id (not resolved at import time) have no path
+		// yet; they'll be resolved lazily right before the download starts.
 		if (entry.filename.isEmpty())
+		{
+			if (entry.id != 0)
+				downloads.append( PendingDownload{ QString(), QString(), entry.title, entry.id, entry.year, entry.category } );
 			continue;
+		}
 
 		const QString fileName = sanitizeFileName( entry.filename );
 
@@ -1122,7 +1151,7 @@ QList< CacowardsTab::PendingDownload > CacowardsTab::collectCheckedDownloads() c
 
 		const QString filePath = QDir( targetDir() ).filePath( subDir.isEmpty() ? fileName : subDir + '/' + fileName );
 
-		downloads.append( PendingDownload{ filePath, entry.relativePath(), entry.title } );
+		downloads.append( PendingDownload{ filePath, entry.relativePath(), entry.title, 0, entry.year, entry.category } );
 	}
 
 	return downloads;
@@ -1220,8 +1249,14 @@ void CacowardsTab::startNextDownload()
 		auto download = std::make_unique< ActiveDownload >();
 		download->path = next.filePath;
 		download->title = next.title;
-		for (const char * base : kDownloadMirrors)
-			download->urls.append( QString::fromLatin1( base ) + next.relativePath );
+		download->resolveId = next.id;
+		download->year = next.year;
+		download->category = next.category;
+		if (next.id == 0)  // the path is already known, build the mirror URLs right away
+		{
+			for (const QString & base : shuffledMirrors())
+				download->urls.append( base + next.relativePath );
+		}
 
 		ActiveDownload * raw = download.get();
 		activeDownloads_.push_back( std::move( download ) );
@@ -1244,6 +1279,28 @@ void CacowardsTab::startNextDownload()
 
 void CacowardsTab::startDownload( ActiveDownload * download )
 {
+	// This entry carries only an /idgames id - resolve it to a path first, then download.
+	if (download->resolveId != 0)
+	{
+		QUrl url( kIdgamesApiBase );
+		QUrlQuery query;
+		query.addQueryItem( "action", "get" );
+		query.addQueryItem( "id", QString::number( download->resolveId ) );
+		query.addQueryItem( "out", "json" );
+		url.setQuery( query );
+
+		QNetworkRequest request( url );
+		request.setRawHeader( "User-Agent", kUserAgent );
+		request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
+
+		download->resolveReply = network_->get( request );
+		connect( download->resolveReply, &QNetworkReply::finished, this, [ this, download ]()
+		{
+			onDownloadIdResolved( download );
+		});
+		return;
+	}
+
 	if (download->urlIdx >= download->urls.size())
 		return;
 
@@ -1294,6 +1351,56 @@ void CacowardsTab::startDownload( ActiveDownload * download )
 	logMessage( QString( "Downloading \"%1\"%2 ..." )
 		.arg( QFileInfo( download->path ).fileName() )
 		.arg( batchInfo ) );
+}
+
+void CacowardsTab::onDownloadIdResolved( ActiveDownload * download )
+{
+	QNetworkReply * reply = download->resolveReply;
+	download->resolveReply = nullptr;
+
+	bool ok = false;
+	QString dir, filename;
+	if (reply && reply->error() == QNetworkReply::NoError)
+	{
+		const QJsonDocument doc = QJsonDocument::fromJson( reply->readAll() );
+		if (doc.isObject())
+		{
+			const QJsonObject content = doc.object()[ "content" ].toObject();
+			dir = content[ "dir" ].toString();
+			filename = content[ "filename" ].toString();
+			ok = !dir.isEmpty() && !filename.isEmpty();
+		}
+	}
+	if (reply)
+		reply->deleteLater();
+
+	if (ok)
+	{
+		// rebuild the save path and the mirror URLs from the resolved path, then download
+		const QString fileName = sanitizeFileName( filename );
+		QString subDir;
+		if (autosortChk_->isChecked())
+			subDir = QString( "Cacowards/%1/%2" ).arg( download->year ).arg( sanitizeFileName( download->category ) );
+		download->path = QDir( targetDir() ).filePath( subDir.isEmpty() ? fileName : subDir + '/' + fileName );
+
+		const QString relativePath = dir + fileName;  // dir always ends with '/'
+		download->urls.clear();
+		for (const QString & base : shuffledMirrors())
+			download->urls.append( base + relativePath );
+
+		download->resolveId = 0;
+		logMessage( QString( "Resolved \"%1\" to %2." ).arg( download->title ).arg( relativePath ) );
+		startDownload( download );
+	}
+	else
+	{
+		logMessage( QString( "Could not resolve \"%1\" (id=%2): %3" )
+			.arg( download->title )
+			.arg( download->resolveId )
+			.arg( reply ? reply->errorString() : QStringLiteral("no reply") ) );
+		removeDownload( download );
+		startNextDownload();
+	}
 }
 
 void CacowardsTab::onDownloadFinished( ActiveDownload * download )

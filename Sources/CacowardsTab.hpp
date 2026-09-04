@@ -137,20 +137,27 @@ class CacowardsTab : public QWidget {
 	/// A file queued for download.
 	struct PendingDownload
 	{
-		QString filePath;     ///< absolute path where the file will be saved
+		QString filePath;     ///< absolute path where the file will be saved (empty until an id has been resolved)
 		QString relativePath; ///< path of the file within the archive (used to build mirror URLs)
 		QString title;        ///< entry title, used to name the folder when unpacking
+		int id = 0;           ///< /idgames id, set when the download path still needs to be resolved (0 = path already known)
+		int year = 0;         ///< entry year (used if the path must be built after resolving the id)
+		QString category;     ///< entry category (used if the path must be built after resolving the id)
 	};
 
 	/// A download that is currently in progress (one per active network request).
 	struct ActiveDownload
 	{
 		QNetworkReply * reply = nullptr;
+		QNetworkReply * resolveReply = nullptr; ///< reply while resolving an /idgames id, null otherwise
 		QFile * file = nullptr;         ///< file currently being written to
 		QString path;                   ///< absolute path of the file being downloaded
 		QString title;                  ///< entry title, used to name the folder when unpacking
 		QStringList urls;               ///< candidate mirror URLs for this file
 		int urlIdx = 0;                 ///< index of the mirror currently being tried
+		int resolveId = 0;              ///< /idgames id to resolve before downloading (0 = path already known)
+		int year = 0;                   ///< entry year, used when the path is built after resolving the id
+		QString category;               ///< entry category, used when the path is built after resolving the id
 		QFutureWatcher< bool > * unpackWatcher = nullptr;   ///< watcher for the background unpacking, null if no unpacking in progress
 		QString extractDir;             ///< directory the archive is being extracted into (while unpacking)
 	};
@@ -169,6 +176,7 @@ class CacowardsTab : public QWidget {
 	void updateDownloadBtnState();
 	void startNextDownload();
 	void startDownload( ActiveDownload * download );
+	void onDownloadIdResolved( ActiveDownload * download );
 	void onUnpackFinished( ActiveDownload * download );
 	void removeDownload( ActiveDownload * download );
 	void updateDownloadProgress();
