@@ -677,6 +677,7 @@ QJsonObject ModSettings::serialize() const
 	settingsJs["top_wads_download_dir"] = settings.topWadsDownloadDir;
 	settingsJs["top_wads_expanded_nodes"] = serializeStringList( settings.topWadsExpandedNodes );
 	settingsJs["show_activity_log"] = settings.showActivityLog;
+	settingsJs["hidden_idgames_columns"] = serializeStringList( settings.hiddenIdgamesColumns );
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -699,6 +700,8 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 	if (JsonArrayCtx nodesJs = settingsJs.getArray( "top_wads_expanded_nodes" ))
 		settings.topWadsExpandedNodes = deserializeStringList( nodesJs );
 	settings.showActivityLog = settingsJs.getBool( "show_activity_log", settings.showActivityLog );
+	if (JsonArrayCtx colsJs = settingsJs.getArray( "hidden_idgames_columns" ))
+		settings.hiddenIdgamesColumns = deserializeStringList( colsJs );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

@@ -35,6 +35,9 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QMenu>
+#include <QAction>
+#include <QApplication>
 #include <QRegularExpression>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -73,6 +76,19 @@ QString formatSize( qint64 bytes )
 	} while (value >= 1024.0 && unitIdx < 3);
 
 	return QString::number( value, 'f', 1 ) + ' ' + units[ unitIdx ];
+}
+
+/// Formats a Unix timestamp (seconds since epoch) into an approximate age like "35 years".
+QString formatAge( qint64 age )
+{
+	if (age <= 0)
+		return QString();
+
+	// different lengths for leap years are irrelevant at this precision; 365.25 is a good enough average
+	constexpr double secondsPerYear = 365.25 * 24.0 * 3600.0;
+	const qint64 years = qMax< qint64 >( 0, ( QDateTime::currentSecsSinceEpoch() - age ) / qint64( secondsPerYear ) );
+
+	return QStringLiteral( "%1 year%2" ).arg( years ).arg( years == 1 ? QString() : QStringLiteral("s") );
 }
 
 } // namespace
@@ -167,14 +183,15 @@ void IdgamesTab::buildUi()
 	//-- results table and details ---------------------------------------------
 
 	resultsTable_ = new QTableWidget( this );
-	resultsTable_->setColumnCount( 6 );
-	resultsTable_->setHorizontalHeaderLabels( QStringList{ "✓", "Title", "Author", "Rating", "Size", "Date" } );
+	resultsTable_->setColumnCount( 8 );
+	resultsTable_->setHorizontalHeaderLabels( QStringList{ "✓", "Title", "Author", "Rating", "Votes", "Size", "Date", "Age" } );
 	resultsTable_->setSelectionBehavior( QAbstractItemView::SelectRows );
 	resultsTable_->setSelectionMode( QAbstractItemView::SingleSelection );
 	resultsTable_->setEditTriggers( QAbstractItemView::NoEditTriggers );
 	resultsTable_->verticalHeader()->setVisible( false );
 	resultsTable_->horizontalHeader()->setSectionResizeMode( 0, QHeaderView::ResizeToContents );
 	resultsTable_->horizontalHeader()->setSectionResizeMode( 1, QHeaderView::Stretch );
+	resultsTable_->horizontalHeader()->setContextMenuPolicy( Qt::CustomContextMenu );
 
 	detailsView_ = new QTextEdit( this );
 	detailsView_->setReadOnly( true );
@@ -249,6 +266,7 @@ void IdgamesTab::buildUi()
 	connect( resultsTable_, &QTableWidget::itemChanged, this, &IdgamesTab::onItemChanged );
 	connect( browseBtn_, &QPushButton::clicked, this, &IdgamesTab::browseTargetDir );
 	connect( downloadBtn_, &QPushButton::clicked, this, &IdgamesTab::downloadChecked );
+	connect( resultsTable_->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &IdgamesTab::onHeaderContextMenu );
 	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
 	{
 		if (settingLogVisible_)
@@ -403,6 +421,7 @@ void IdgamesTab::onSearchFinished()
 		entry.rating      = file[ "rating" ].toDouble();
 		entry.votes       = file[ "votes" ].toInt();
 		entry.size        = qint64( file[ "size" ].toDouble() );
+		entry.age         = qint64( file[ "age" ].toDouble() );
 		entry.date        = file[ "date" ].toString();
 		entry.dir         = file[ "dir" ].toString();
 		entry.filename    = file[ "filename" ].toString();
@@ -445,13 +464,15 @@ void IdgamesTab::populateResults( const QList< RemoteWadEntry > & entries )
 
 		resultsTable_->setItem( row, 2, new QTableWidgetItem( entry.author ) );
 
-		QString ratingText = "—";
-		if (entry.votes > 0)
-			ratingText = QString( "%1 (%2)" ).arg( entry.rating, 0, 'f', 2 ).arg( entry.votes );
-		resultsTable_->setItem( row, 3, new QTableWidgetItem( ratingText ) );
+		// rating and votes are separate columns; a WAD with no votes has no rating
+		resultsTable_->setItem( row, 3, new QTableWidgetItem( entry.votes > 0 ? QString::number( entry.rating, 'f', 2 ) : "—" ) );
+		resultsTable_->setItem( row, 4, new QTableWidgetItem( entry.votes > 0 ? QString::number( entry.votes ) : "—" ) );
 
-		resultsTable_->setItem( row, 4, new QTableWidgetItem( formatSize( entry.size ) ) );
-		resultsTable_->setItem( row, 5, new QTableWidgetItem( entry.date ) );
+		resultsTable_->setItem( row, 5, new QTableWidgetItem( formatSize( entry.size ) ) );
+		resultsTable_->setItem( row, 6, new QTableWidgetItem( entry.date ) );
+
+		const QString ageText = formatAge( entry.age );
+		resultsTable_->setItem( row, 7, new QTableWidgetItem( ageText.isEmpty() ? "—" : ageText ) );
 	}
 
 	resultsTable_->resizeColumnsToContents();
@@ -487,6 +508,9 @@ void IdgamesTab::showDetails( int row )
 	text += "Author: " + entry.author + '\n';
 	if (!entry.date.isEmpty())
 		text += "Date: " + entry.date + '\n';
+	const QString ageText = formatAge( entry.age );
+	if (!ageText.isEmpty())
+		text += "Age: " + ageText + '\n';
 	if (entry.votes > 0)
 		text += QString( "Rating: %1 (%2 votes)\n" ).arg( entry.rating, 0, 'f', 2 ).arg( entry.votes );
 	text += "Size: " + formatSize( entry.size ) + '\n';
@@ -842,3 +866,53 @@ void IdgamesTab::logMessage( const QString & message )
 	if (QScrollBar * bar = logView_->verticalScrollBar())
 		bar->setValue( bar->maximum() );
 }
+
+void IdgamesTab::onHeaderContextMenu( const QPoint & pos )
+{
+	QMenu menu( this );
+
+	// column 0 (the check-mark) is needed for downloads and cannot be hidden
+	for (int col = 1; col < resultsTable_->columnCount(); ++col)
+	{
+		const QString label = resultsTable_->horizontalHeaderItem( col ) ? resultsTable_->horizontalHeaderItem( col )->text() : QString::number( col );
+		QAction * action = menu.addAction( label );
+		action->setCheckable( true );
+		action->setChecked( !resultsTable_->isColumnHidden( col ) );
+		connect( action, &QAction::triggered, this, [ this, col ]( bool checked )
+		{
+			resultsTable_->setColumnHidden( col, !checked );
+
+			const QString label = resultsTable_->horizontalHeaderItem( col ) ? resultsTable_->horizontalHeaderItem( col )->text() : QString();
+			if (checked)
+				hiddenColumns_.removeAll( label );
+			else if (!hiddenColumns_.contains( label ))
+				hiddenColumns_.append( label );
+
+			// keep the Title column stretched and the rest sized to content
+			resultsTable_->horizontalHeader()->setSectionResizeMode( col, col == 1 ? QHeaderView::Stretch : QHeaderView::ResizeToContents );
+			resultsTable_->resizeColumnsToContents();
+			resultsTable_->horizontalHeader()->setSectionResizeMode( 1, QHeaderView::Stretch );
+
+			emit columnVisibilityChanged();
+		});
+	}
+
+	menu.exec( resultsTable_->horizontalHeader()->mapToGlobal( pos ) );
+}
+
+void IdgamesTab::applyVisibleColumns()
+{
+	for (int col = 0; col < resultsTable_->columnCount(); ++col)
+	{
+		const QString label = resultsTable_->horizontalHeaderItem( col ) ? resultsTable_->horizontalHeaderItem( col )->text() : QString();
+		resultsTable_->setColumnHidden( col, col != 0 && hiddenColumns_.contains( label ) );
+	}
+}
+
+void IdgamesTab::setHiddenColumns( const QStringList & cols )
+{
+	hiddenColumns_ = cols;
+	applyVisibleColumns();
+}
+
+QStringList IdgamesTab::hiddenColumns() const { return hiddenColumns_; }

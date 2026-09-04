@@ -59,6 +59,12 @@ class IdgamesTab : public QWidget {
 	/// Shows/hides the activity log. Shared across the download tabs via MainWindow.
 	void setLogVisible( bool visible );
 
+	/// Sets which result columns are hidden (by header label) and applies it to the table.
+	void setHiddenColumns( const QStringList & cols );
+
+	/// Returns the currently hidden result columns (by header label).
+	QStringList hiddenColumns() const;
+
  signals:
 
 	/// Emitted after a file has been successfully downloaded and saved to disk.
@@ -70,6 +76,9 @@ class IdgamesTab : public QWidget {
 	/// Emitted when the user shows/hides the activity log (propagated to the other download tabs).
 	void logVisibilityChanged( bool enabled );
 
+	/// Emitted when the user shows/hides a results column (so it can be persisted).
+	void columnVisibilityChanged();
+
  private slots:
 
 	void search();
@@ -77,6 +86,7 @@ class IdgamesTab : public QWidget {
 	void onSearchFinished();
 	void onCurrentRowChanged( int currentRow, int currentColumn, int previousRow, int previousColumn );
 	void onItemChanged( QTableWidgetItem * item );
+	void onHeaderContextMenu( const QPoint & pos );
 	void browseTargetDir();
 	void downloadChecked();
 	void onDownloadFinished();
@@ -94,6 +104,7 @@ class IdgamesTab : public QWidget {
 		double rating = 0.0;
 		int votes = 0;
 		qint64 size = 0;       ///< size in bytes
+		qint64 age = 0;        ///< upload time as a Unix timestamp (seconds since epoch)
 		QString date;          ///< upload date as YYYY-MM-DD
 		QString dir;           ///< path within the archive, e.g. "combos/"
 		QString filename;      ///< e.g. "ww-trror.zip"
@@ -120,6 +131,7 @@ class IdgamesTab : public QWidget {
 	void showDetails( int row );
 	void setStatus( const QString & text );
 	void logMessage( const QString & message );
+	void applyVisibleColumns();
 	QString sanitizeFileName( const QString & fileName ) const;
 	bool ensureTargetDirUsable();
 	bool askToUseMapDir( const QString & targetDir );
@@ -162,6 +174,7 @@ class IdgamesTab : public QWidget {
 	QCheckBox * logChk_ = nullptr;          ///< toggles visibility of the activity log
 	QPlainTextEdit * logView_ = nullptr;    ///< scrollable activity log (hidden by default)
 	bool settingLogVisible_ = false;       ///< guards against re-emitting logVisibilityChanged while setting programmatically
+	QStringList hiddenColumns_;             ///< result columns hidden by the user (by header label)
 
 };
 

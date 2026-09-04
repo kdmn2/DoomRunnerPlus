@@ -1014,6 +1014,13 @@ MainWindow::MainWindow()
 	connect( cacowardsTab, &CacowardsTab::logVisibilityChanged, this, syncDownloaderLog );
 	connect( topWadsTab, &TopWadsTab::logVisibilityChanged, this, syncDownloaderLog );
 
+	// persist the IdGames column visibility when the user changes it
+	connect( idgamesTab, &IdgamesTab::columnVisibilityChanged, this, [ this ]()
+	{
+		modSettings.hiddenIdgamesColumns = idgamesTab->hiddenColumns();
+		scheduleSavingOptions( true );
+	});
+
 	// group all download tabs under the top-level "WAD Downloader" tab
 	int downloadTabIdx = ui->tabWidget->addTab( downloaderTabs, "WAD Downloader" );
 	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive, the Cacowards and the top-list articles" );
@@ -1455,6 +1462,7 @@ void MainWindow::applyIdgamesSettings()
 {
 	idgamesTab->setTargetDir( !modSettings.idgamesDownloadDir.isEmpty() ? modSettings.idgamesDownloadDir : modSettings.lastUsedDir );
 	idgamesTab->setMapSourceDir( mapSettings.dir );
+	idgamesTab->setHiddenColumns( modSettings.hiddenIdgamesColumns );
 }
 
 void MainWindow::applyTopWadsSettings()
