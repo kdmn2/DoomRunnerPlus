@@ -184,6 +184,7 @@ static void initColorPalettes()
 		darkPalette.setColor( QPalette::All,      QPalette::Button, darkColor );
 		darkPalette.setColor( QPalette::All,      QPalette::ButtonText, Qt::white );
 		darkPalette.setColor( QPalette::Disabled, QPalette::ButtonText, disabledColor );
+		darkPalette.setColor( QPalette::All,      QPalette::PlaceholderText, QColor(0x80,0x80,0x80) );
 		darkPalette.setColor( QPalette::All,      QPalette::BrightText, Qt::red );
 		darkPalette.setColor( QPalette::All,      QPalette::Link, QColor(0x1D,0x99,0xF3) );
 		darkPalette.setColor( QPalette::All,      QPalette::Highlight, QColor(0x2A,0x82,0xDA) );

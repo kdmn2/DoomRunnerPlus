@@ -540,7 +540,15 @@ QString getDataDirForApp( const QString & executablePath )
 // installation properties
 
 static const QRegularExpression snapPathRegex("^/snap/([^/]+)/");
-static const QRegularExpression flatpakPathRegex("^/var/lib/flatpak/app/([^/]+)/");
+// Matches either system (`/var/lib/flatpak/app`) or per-user (`~/.local/share/flatpak/app`)
+// Flatpak installations, capturing the app id. Built lazily because it needs the home dir.
+static const QRegularExpression & getFlatpakPathRegex()
+{
+	static const QRegularExpression regex(
+		QStringLiteral("^(?:/var/lib/flatpak/app/|%1/.local/share/flatpak/app/)([^/]+)/")
+			.arg( QRegularExpression::escape( QDir::cleanPath( getMainHomeDir() ) ) ) );
+	return regex;
+}
 
 static SandboxEnvInfo getSandboxEnvInfo( const QString & executablePath )
 {
@@ -555,7 +563,7 @@ static SandboxEnvInfo getSandboxEnvInfo( const QString & executablePath )
 		sandboxEnv.appName = match.captured(1);
 		sandboxEnv.homeDir = getMainHomeDir()%"/snap/"%sandboxEnv.appName%"/current";
 	}
-	else if ((match = flatpakPathRegex.match( absoluteExePath )).hasMatch())
+	else if ((match = getFlatpakPathRegex().match( absoluteExePath )).hasMatch())
 	{
 		sandboxEnv.type = SandboxType::Flatpak;
 		sandboxEnv.appName = match.captured(1);
@@ -639,6 +647,12 @@ QStringList findAppsByFileName( const QStringList & nameFragments )
 	{
 		// some installation methods (Flatpak, Snap, ...) don't add their binaries to PATH
 		dirPaths << "/usr/bin" << "/usr/local/bin" << "/snap/bin" << "/var/lib/flatpak/exports/bin";
+		// AppImage managers (e.g. appman) and user installs live in home directories
+		// that are not part of SteamOS's PATH by default.
+		const QString homeDir = QDir::cleanPath( getMainHomeDir() );
+		dirPaths << homeDir + "/.local/bin"
+		         << homeDir + "/.local/share/flatpak/exports/bin"
+		         << homeDir + "/.local/share/appman/apps";
 	}
 
 	QStringList foundPaths;
@@ -679,18 +693,80 @@ QStringList findAppsByFileName( const QStringList & nameFragments )
 	return foundPaths;
 }
 
+static bool stringContainsAnyFragment( const QString & str, const QStringList & fragments )
+{
+	for (const QString & fragment : fragments)
+		if (str.contains( fragment ))
+			return true;
+	return false;
+}
+
+// Flatpak apps don't place their binaries in PATH (or in /usr/bin, ...). Their executable
+// lives inside the app directory and they have to be launched through `flatpak run`.
+static QStringList findFlatpakDoomEngines( const QStringList & fragments )
+{
+	QStringList found;
+
+	const QString homeDir = QDir::cleanPath( getMainHomeDir() );
+	const QStringList roots = { QStringLiteral("/var/lib/flatpak/app"), homeDir + "/.local/share/flatpak/app" };
+
+	for (const QString & root : roots)
+	{
+		const QDir rootDir( root );
+		if (!rootDir.isReadable())
+			continue;
+
+		for (const QString & appId : rootDir.entryList( QDir::Dirs | QDir::NoDotAndDotDot ))
+		{
+			if (!stringContainsAnyFragment( appId.toLower(), fragments ))
+				continue;
+
+			// `current/active` are symlinks to the deployed app, so this resolves to a path
+			// under `.../flatpak/app/<app-id>/...` which getSandboxEnvInfo() recognizes.
+			const QDir binDir( rootDir.filePath( appId + "/current/active/files/bin" ) );
+			if (!binDir.exists() || !binDir.isReadable())
+				continue;
+
+			for (const QFileInfo & entry : binDir.entryInfoList( QDir::Files | QDir::NoDotAndDotDot ))
+			{
+				if (!entry.isExecutable())
+					continue;
+				if (!stringContainsAnyFragment( entry.fileName().toLower(), fragments ))
+					continue;
+
+				const QString absPath = entry.canonicalFilePath();
+				if (!absPath.isEmpty())
+					found.append( absPath );
+			}
+		}
+	}
+
+	return found;
+}
+
 QStringList findDoomEngines()
 {
 	// Names of the known Doom source ports. Besides the obvious "doom" (covered by the first entry),
 	// these are the frequently used executables of ports whose name doesn't contain the word "doom".
-	return findAppsByFileName({
+	const QStringList fragments = {
 		"doom",       // GZDoom, Chocolate Doom, Crispy Doom, DSDA-Doom, Doom Retro, nugget-doom, ...
 		"prboom",     // PrBoom, PrBoom+
 		"woof",       // Woof
 		"zandronum",  // Zandronum
 		"odamex",     // Odamex
 		"eternity",   // Eternity Engine
-	});
+	};
+
+	QSet< QString > paths;
+	for (const QString & path : findAppsByFileName( fragments ))
+		paths.insert( path );
+	if constexpr (!IS_WINDOWS && !IS_MACOS)
+		for (const QString & path : findFlatpakDoomEngines( fragments ))
+			paths.insert( path );
+
+	QStringList found = paths.values();
+	found.sort( Qt::CaseInsensitive );
+	return found;
 }
 
 // On Unix, to run an executable file inside current working directory, the relative path needs to be prepended by "./"
