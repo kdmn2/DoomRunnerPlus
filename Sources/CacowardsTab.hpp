@@ -99,9 +99,6 @@ class CacowardsTab : public QWidget {
 	/// Sets the directory used as the source of map packs (used as a fallback download target suggestion).
 	void setMapSourceDir( const QString & dir );
 
-	/// Shows/hides the activity log. Shared across the download tabs via MainWindow.
-	void setLogVisible( bool visible );
-
  signals:
 
 	/// Emitted after a file has been successfully downloaded and saved to disk.
@@ -121,8 +118,8 @@ class CacowardsTab : public QWidget {
 	/// Emitted when the user toggles parallel downloads.
 	void parallelDownloadChanged( bool enabled );
 
-	/// Emitted when the user shows/hides the activity log (propagated to the other download tabs).
-	void logVisibilityChanged( bool enabled );
+	/// Emitted for each activity-log message (collected in the single shared WAD Downloader log window).
+	void activityLogged( const QString & message );
 
  private slots:
 
@@ -235,13 +232,10 @@ class CacowardsTab : public QWidget {
 	QCheckBox * unpackChk_ = nullptr;
 	QCheckBox * deleteAfterExtractChk_ = nullptr;
 	QCheckBox * parallelChk_ = nullptr;
-	QCheckBox * logChk_ = nullptr;          ///< toggles visibility of the activity log
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
-	QPlainTextEdit * logView_ = nullptr;    ///< scrollable activity log (hidden by default)
 	QString dataFilePath_;
 	QString mapSourceDir_;   ///< directory used as the source of map packs (suggested as a fallback download target)
-	bool settingLogVisible_ = false;   ///< guards against re-emitting logVisibilityChanged while setting programmatically
 
 };
 

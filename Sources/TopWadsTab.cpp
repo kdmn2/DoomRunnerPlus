@@ -184,14 +184,6 @@ bool TopWadsTab::parallelDownload() const { return maxParallel_ > 1; }
 
 void TopWadsTab::setMapSourceDir( const QString & dir ) { mapSourceDir_ = dir; }
 
-void TopWadsTab::setLogVisible( bool visible )
-{
-	settingLogVisible_ = true;
-	logChk_->setChecked( visible );
-	logView_->setVisible( visible );
-	settingLogVisible_ = false;
-}
-
 //----------------------------------------------------------------------------------------------------------------------
 
 void TopWadsTab::buildUi()
@@ -271,21 +263,6 @@ void TopWadsTab::buildUi()
 	optionsRow->addWidget( deleteAfterExtractChk_ );
 	optionsRow->addWidget( parallelChk_ );
 
-	//-- activity log ------------------------------------------------------------
-
-	logChk_ = new QCheckBox( "Show log", this );
-	logChk_->setToolTip( "Show a log of list loading/importing, downloads and extraction events" );
-
-	logView_ = new QPlainTextEdit( this );
-	logView_->setReadOnly( true );
-	logView_->setPlaceholderText( "No activity logged yet." );
-	logView_->setMinimumHeight( 140 );
-	logView_->setVisible( false );
-
-	QHBoxLayout * logRow = new QHBoxLayout;
-	logRow->addStretch( 1 );
-	logRow->addWidget( logChk_ );
-
 	//-- status bar --------------------------------------------------------------
 
 	statusLabel_ = new QLabel( "Loading...", this );
@@ -301,8 +278,6 @@ void TopWadsTab::buildUi()
 	mainLayout->addWidget( treePanel, 1 );
 	mainLayout->addLayout( downloadRow );
 	mainLayout->addLayout( optionsRow );
-	mainLayout->addLayout( logRow );
-	mainLayout->addWidget( logView_ );
 	mainLayout->addWidget( progressBar_ );
 	mainLayout->addWidget( statusLabel_ );
 
@@ -334,13 +309,6 @@ void TopWadsTab::buildUi()
 	connect( unpackChk_, &QCheckBox::toggled, this, [ this ]( bool enabled )
 	{
 		deleteAfterExtractChk_->setEnabled( enabled );
-	});
-	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
-	{
-		if (settingLogVisible_)
-			return;
-		logView_->setVisible( checked );
-		emit logVisibilityChanged( checked );
 	});
 }
 
@@ -1318,9 +1286,5 @@ void TopWadsTab::setStatus( const QString & text ) { statusLabel_->setText( text
 
 void TopWadsTab::logMessage( const QString & message )
 {
-	logView_->appendPlainText( QString( "[%1] %2" )
-		.arg( QDateTime::currentDateTime().toString( "HH:mm:ss" ) )
-		.arg( message ) );
-	if (QScrollBar * bar = logView_->verticalScrollBar())
-		bar->setValue( bar->maximum() );
+	emit activityLogged( message );
 }

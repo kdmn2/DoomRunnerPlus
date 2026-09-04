@@ -32,6 +32,12 @@
 #include "TopWadsTab.hpp"
 
 #include <QTabWidget>
+#include <QPlainTextEdit>
+#include <QScrollBar>
+#include <QCheckBox>
+#include <QDateTime>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 
 #include "Utils/LangUtils.hpp"
 #include "Utils/ContainerUtils.hpp"
@@ -1001,18 +1007,43 @@ MainWindow::MainWindow()
 		scheduleSavingOptions();
 	});
 
-	// the activity-log toggle is shared across all download tabs: toggling one updates them all
-	const auto syncDownloaderLog = [ this ]( bool visible )
+	// single shared activity log for all download tabs
+	downloaderLogChk_ = new QCheckBox( "Show log", this );
+	downloaderLogChk_->setToolTip( "Show a log of searches, downloads and extraction events" );
+
+	downloaderLogView_ = new QPlainTextEdit( this );
+	downloaderLogView_->setReadOnly( true );
+	downloaderLogView_->setPlaceholderText( "No activity logged yet." );
+	downloaderLogView_->setMinimumHeight( 140 );
+	downloaderLogView_->setVisible( modSettings.showActivityLog );
+
+	QWidget * downloaderPage = new QWidget( ui->tabWidget );
+	QVBoxLayout * downloaderLayout = new QVBoxLayout( downloaderPage );
+	downloaderLayout->setContentsMargins( 0, 0, 0, 0 );
+	downloaderLayout->addWidget( downloaderTabs, 1 );
+	QHBoxLayout * downloaderLogRow = new QHBoxLayout;
+	downloaderLogRow->addStretch( 1 );
+	downloaderLogRow->addWidget( downloaderLogChk_ );
+	downloaderLayout->addLayout( downloaderLogRow );
+	downloaderLayout->addWidget( downloaderLogView_ );
+
+	// route every download tab's log messages into the single shared log window
+	const auto appendToLog = [ this ]( const QString & message )
 	{
-		modSettings.showActivityLog = visible;
-		scheduleSavingOptions( true );
-		idgamesTab->setLogVisible( visible );
-		cacowardsTab->setLogVisible( visible );
-		topWadsTab->setLogVisible( visible );
+		downloaderLogView_->appendPlainText( QString( "[%1] %2" ).arg( QDateTime::currentDateTime().toString( "HH:mm:ss" ) ).arg( message ) );
+		if (QScrollBar * bar = downloaderLogView_->verticalScrollBar())
+			bar->setValue( bar->maximum() );
 	};
-	connect( idgamesTab, &IdgamesTab::logVisibilityChanged, this, syncDownloaderLog );
-	connect( cacowardsTab, &CacowardsTab::logVisibilityChanged, this, syncDownloaderLog );
-	connect( topWadsTab, &TopWadsTab::logVisibilityChanged, this, syncDownloaderLog );
+	connect( idgamesTab, &IdgamesTab::activityLogged, this, appendToLog );
+	connect( cacowardsTab, &CacowardsTab::activityLogged, this, appendToLog );
+	connect( topWadsTab, &TopWadsTab::activityLogged, this, appendToLog );
+
+	connect( downloaderLogChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		downloaderLogView_->setVisible( checked );
+		modSettings.showActivityLog = checked;
+		scheduleSavingOptions( true );
+	});
 
 	// persist the IdGames column visibility when the user changes it
 	connect( idgamesTab, &IdgamesTab::columnVisibilityChanged, this, [ this ]()
@@ -1021,8 +1052,18 @@ MainWindow::MainWindow()
 		scheduleSavingOptions( true );
 	});
 
+	// persist the IdGames download options
+	connect( idgamesTab, &IdgamesTab::autosortChanged, this, [ this ]( bool v )
+	{ modSettings.idgamesAutosort = v; scheduleSavingOptions( true ); });
+	connect( idgamesTab, &IdgamesTab::unpackChanged, this, [ this ]( bool v )
+	{ modSettings.idgamesUnpack = v; scheduleSavingOptions( true ); });
+	connect( idgamesTab, &IdgamesTab::deleteAfterExtractChanged, this, [ this ]( bool v )
+	{ modSettings.idgamesDeleteAfterExtract = v; scheduleSavingOptions( true ); });
+	connect( idgamesTab, &IdgamesTab::parallelDownloadChanged, this, [ this ]( bool v )
+	{ modSettings.idgamesParallel = v; scheduleSavingOptions( true ); });
+
 	// group all download tabs under the top-level "WAD Downloader" tab
-	int downloadTabIdx = ui->tabWidget->addTab( downloaderTabs, "WAD Downloader" );
+	int downloadTabIdx = ui->tabWidget->addTab( downloaderPage, "WAD Downloader" );
 	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive, the Cacowards and the top-list articles" );
 
 	// setup combo-boxes
@@ -1463,6 +1504,10 @@ void MainWindow::applyIdgamesSettings()
 	idgamesTab->setTargetDir( !modSettings.idgamesDownloadDir.isEmpty() ? modSettings.idgamesDownloadDir : modSettings.lastUsedDir );
 	idgamesTab->setMapSourceDir( mapSettings.dir );
 	idgamesTab->setHiddenColumns( modSettings.hiddenIdgamesColumns );
+	idgamesTab->setAutosort( modSettings.idgamesAutosort );
+	idgamesTab->setUnpack( modSettings.idgamesUnpack );
+	idgamesTab->setDeleteAfterExtract( modSettings.idgamesDeleteAfterExtract );
+	idgamesTab->setParallelDownload( modSettings.idgamesParallel );
 }
 
 void MainWindow::applyTopWadsSettings()
@@ -1474,10 +1519,8 @@ void MainWindow::applyTopWadsSettings()
 
 void MainWindow::applyDownloaderLogSettings()
 {
-	const bool show = modSettings.showActivityLog;
-	idgamesTab->setLogVisible( show );
-	cacowardsTab->setLogVisible( show );
-	topWadsTab->setLogVisible( show );
+	downloaderLogChk_->setChecked( modSettings.showActivityLog );
+	downloaderLogView_->setVisible( modSettings.showActivityLog );
 }
 
 void MainWindow::loadMonitorInfo( QComboBox * box )

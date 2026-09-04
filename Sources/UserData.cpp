@@ -678,6 +678,10 @@ QJsonObject ModSettings::serialize() const
 	settingsJs["top_wads_expanded_nodes"] = serializeStringList( settings.topWadsExpandedNodes );
 	settingsJs["show_activity_log"] = settings.showActivityLog;
 	settingsJs["hidden_idgames_columns"] = serializeStringList( settings.hiddenIdgamesColumns );
+	settingsJs["idgames_autosort"] = settings.idgamesAutosort;
+	settingsJs["idgames_unpack"] = settings.idgamesUnpack;
+	settingsJs["idgames_delete_after_extract"] = settings.idgamesDeleteAfterExtract;
+	settingsJs["idgames_parallel"] = settings.idgamesParallel;
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -702,6 +706,10 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 	settings.showActivityLog = settingsJs.getBool( "show_activity_log", settings.showActivityLog );
 	if (JsonArrayCtx colsJs = settingsJs.getArray( "hidden_idgames_columns" ))
 		settings.hiddenIdgamesColumns = deserializeStringList( colsJs );
+	settings.idgamesAutosort = settingsJs.getBool( "idgames_autosort", settings.idgamesAutosort );
+	settings.idgamesUnpack = settingsJs.getBool( "idgames_unpack", settings.idgamesUnpack );
+	settings.idgamesDeleteAfterExtract = settingsJs.getBool( "idgames_delete_after_extract", settings.idgamesDeleteAfterExtract );
+	settings.idgamesParallel = settingsJs.getBool( "idgames_parallel", settings.idgamesParallel );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

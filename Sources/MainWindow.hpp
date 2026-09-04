@@ -31,6 +31,8 @@ class QItemSelection;
 class QComboBox;
 class QLineEdit;
 class QShortcut;
+class QPlainTextEdit;
+class QCheckBox;
 class IdgamesTab;
 class CacowardsTab;
 class TopWadsTab;
@@ -410,6 +412,8 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	IdgamesTab * idgamesTab = nullptr;
 	CacowardsTab * cacowardsTab = nullptr;
 	TopWadsTab * topWadsTab = nullptr;
+	QCheckBox * downloaderLogChk_ = nullptr;      ///< shows/hides the shared download-tab log
+	QPlainTextEdit * downloaderLogView_ = nullptr; ///< the single shared download-tab log window
 
 	QAction * hideLabelAction = nullptr;
 	QAction * refreshMapDirAction = nullptr;

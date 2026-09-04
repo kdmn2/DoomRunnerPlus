@@ -101,9 +101,6 @@ class TopWadsTab : public QWidget {
 
 	void setMapSourceDir( const QString & dir );
 
-	/// Shows/hides the activity log. Shared across the download tabs via MainWindow.
-	void setLogVisible( bool visible );
-
  signals:
 
 	void downloadFinished( const QString & filePath );
@@ -114,8 +111,8 @@ class TopWadsTab : public QWidget {
 	void expansionChanged();
 	void parallelDownloadChanged( bool enabled );
 
-	/// Emitted when the user shows/hides the activity log (propagated to the other download tabs).
-	void logVisibilityChanged( bool enabled );
+	/// Emitted for each activity-log message (collected in the single shared WAD Downloader log window).
+	void activityLogged( const QString & message );
 
  private slots:
 
@@ -212,13 +209,10 @@ class TopWadsTab : public QWidget {
 	QCheckBox * unpackChk_ = nullptr;
 	QCheckBox * deleteAfterExtractChk_ = nullptr;
 	QCheckBox * parallelChk_ = nullptr;
-	QCheckBox * logChk_ = nullptr;
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
-	QPlainTextEdit * logView_ = nullptr;
 	QString dataFilePath_;
 	QString mapSourceDir_;
-	bool settingLogVisible_ = false;   ///< guards against re-emitting logVisibilityChanged while setting programmatically
 
 };
 

@@ -15,6 +15,10 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <memory>
+#include <vector>
+
+template< typename T > class QFutureWatcher;
 
 
 class QLineEdit;
@@ -56,8 +60,14 @@ class IdgamesTab : public QWidget {
 	/// Sets the directory used as the source of map packs (used as a fallback download target suggestion).
 	void setMapSourceDir( const QString & dir );
 
-	/// Shows/hides the activity log. Shared across the download tabs via MainWindow.
-	void setLogVisible( bool visible );
+	void setAutosort( bool enabled );
+	bool autosort() const;
+	void setUnpack( bool enabled );
+	bool unpack() const;
+	void setDeleteAfterExtract( bool enabled );
+	bool deleteAfterExtract() const;
+	void setParallelDownload( bool enabled );
+	bool parallelDownload() const;
 
 	/// Sets which result columns are hidden (by header label) and applies it to the table.
 	void setHiddenColumns( const QStringList & cols );
@@ -73,11 +83,17 @@ class IdgamesTab : public QWidget {
 	/// Emitted when the user changes the download target directory.
 	void targetDirChanged( const QString & dir );
 
-	/// Emitted when the user shows/hides the activity log (propagated to the other download tabs).
-	void logVisibilityChanged( bool enabled );
-
 	/// Emitted when the user shows/hides a results column (so it can be persisted).
 	void columnVisibilityChanged();
+
+	/// Emitted for each activity-log message (collected in the single shared WAD Downloader log window).
+	void activityLogged( const QString & message );
+
+	/// Emitted when the user changes one of the download options.
+	void autosortChanged( bool enabled );
+	void unpackChanged( bool enabled );
+	void deleteAfterExtractChanged( bool enabled );
+	void parallelDownloadChanged( bool enabled );
 
  private slots:
 
@@ -89,7 +105,6 @@ class IdgamesTab : public QWidget {
 	void onHeaderContextMenu( const QPoint & pos );
 	void browseTargetDir();
 	void downloadChecked();
-	void onDownloadFinished();
 
  private:
 
@@ -126,6 +141,18 @@ class IdgamesTab : public QWidget {
 		QString relativePath; ///< path of the file within the archive (used to build mirror URLs)
 	};
 
+	/// A download that is currently in progress (one per active network request).
+	struct ActiveDownload
+	{
+		QNetworkReply * reply = nullptr;
+		QFile * file = nullptr;                 ///< file currently being written to
+		QString path;                           ///< absolute path of the file being downloaded
+		QStringList urls;                       ///< candidate mirror URLs for this file
+		int urlIdx = 0;                         ///< index of the mirror currently being tried
+		QFutureWatcher< bool > * unpackWatcher = nullptr;   ///< watcher for the background unpacking, null if none
+		QString extractDir;                     ///< directory the archive is being extracted into (while unpacking)
+	};
+
 	void buildUi();
 	void populateResults( const QList< RemoteWadEntry > & entries );
 	void showDetails( int row );
@@ -138,16 +165,16 @@ class IdgamesTab : public QWidget {
 	void startSearch( const QString & query );
 	QList< int > checkedRows() const;
 	void updateDownloadBtnState();
-	void startDownload( const QString & filePath );
+	void startDownload( ActiveDownload * download );
 	void startNextDownload();
+	void onDownloadFinished( ActiveDownload * download );
+	void onUnpackFinished( ActiveDownload * download );
+	void removeDownload( ActiveDownload * download );
+	void updateDownloadProgress();
 
 	QNetworkAccessManager * network_;
 	QNetworkReply * searchReply_ = nullptr;
-	QNetworkReply * downloadReply_ = nullptr;
-	QFile * downloadFile_ = nullptr;   ///< file currently being written to during a download
-	QString downloadPath_;             ///< absolute path of the file currently being downloaded
-	QStringList downloadUrls_;         ///< candidate mirror URLs for the current download
-	int downloadUrlIdx_ = 0;           ///< index of the mirror currently being tried
+	std::vector< std::unique_ptr< ActiveDownload > > activeDownloads_;   ///< downloads in progress (up to maxParallel_)
 	QList< PendingDownload > pendingDownloads_;   ///< files still waiting to be downloaded
 	int downloadCount_ = 0;            ///< total number of files in the current download batch
 	bool batchActive_ = false;         ///< whether a download batch is currently running
@@ -171,10 +198,14 @@ class IdgamesTab : public QWidget {
 	QPushButton * downloadBtn_ = nullptr;
 	QLabel * statusLabel_ = nullptr;
 	QProgressBar * progressBar_ = nullptr;
-	QCheckBox * logChk_ = nullptr;          ///< toggles visibility of the activity log
-	QPlainTextEdit * logView_ = nullptr;    ///< scrollable activity log (hidden by default)
-	bool settingLogVisible_ = false;       ///< guards against re-emitting logVisibilityChanged while setting programmatically
+	QCheckBox * autosortChk_ = nullptr;
+	QCheckBox * unpackChk_ = nullptr;
+	QCheckBox * deleteAfterExtractChk_ = nullptr;
+	QCheckBox * parallelChk_ = nullptr;
+	int maxParallel_ = 1;                   ///< how many files are downloaded at the same time
 	QStringList hiddenColumns_;             ///< result columns hidden by the user (by header label)
+	int sortColumn_ = -1;                   ///< results column clicked to sort ( -1 = no sort, API order )
+	Qt::SortOrder sortOrder_ = Qt::AscendingOrder;
 
 };
 

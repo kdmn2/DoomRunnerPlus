@@ -387,6 +387,10 @@ struct ModSettings
 	QStringList topWadsExpandedNodes;        ///< top-lists tree nodes that were expanded
 	bool showActivityLog = false;            ///< whether the activity log is shown in the download tabs
 	QStringList hiddenIdgamesColumns;        ///< IdGames result columns hidden by the user (by header label)
+	bool idgamesAutosort = false;            ///< save IdGames downloads into an "IdGames" subfolder
+	bool idgamesUnpack = false;              ///< extract IdGames downloads into folders named after the archive
+	bool idgamesDeleteAfterExtract = false;  ///< delete the archive after extracting it
+	bool idgamesParallel = false;            ///< download up to 4 IdGames files at the same time
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;

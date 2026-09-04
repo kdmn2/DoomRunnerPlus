@@ -237,14 +237,6 @@ void CacowardsTab::setMapSourceDir( const QString & dir )
 	mapSourceDir_ = dir;
 }
 
-void CacowardsTab::setLogVisible( bool visible )
-{
-	settingLogVisible_ = true;
-	logChk_->setChecked( visible );
-	logView_->setVisible( visible );
-	settingLogVisible_ = false;
-}
-
 //----------------------------------------------------------------------------------------------------------------------
 
 void CacowardsTab::buildUi()
@@ -324,21 +316,6 @@ void CacowardsTab::buildUi()
 	optionsRow->addWidget( deleteAfterExtractChk_ );
 	optionsRow->addWidget( parallelChk_ );
 
-	//-- activity log -----------------------------------------------------------
-
-	logChk_ = new QCheckBox( "Show log", this );
-	logChk_->setToolTip( "Show a log of list loading/importing, downloads and extraction events" );
-
-	logView_ = new QPlainTextEdit( this );
-	logView_->setReadOnly( true );
-	logView_->setPlaceholderText( "No activity logged yet." );
-	logView_->setMinimumHeight( 140 );
-	logView_->setVisible( false );  // hidden until the "Show log" checkbox is enabled
-
-	QHBoxLayout * logRow = new QHBoxLayout;
-	logRow->addStretch( 1 );
-	logRow->addWidget( logChk_ );
-
 	//-- status bar -------------------------------------------------------------
 
 	statusLabel_ = new QLabel( "Loading Cacowards data...", this );
@@ -354,8 +331,6 @@ void CacowardsTab::buildUi()
 	mainLayout->addWidget( treePanel, 1 );
 	mainLayout->addLayout( downloadRow );
 	mainLayout->addLayout( optionsRow );
-	mainLayout->addLayout( logRow );
-	mainLayout->addWidget( logView_ );
 	mainLayout->addWidget( progressBar_ );
 	mainLayout->addWidget( statusLabel_ );
 
@@ -390,14 +365,6 @@ void CacowardsTab::buildUi()
 	connect( unpackChk_, &QCheckBox::toggled, this, [ this ]( bool enabled )
 	{
 		deleteAfterExtractChk_->setEnabled( enabled );
-	});
-
-	connect( logChk_, &QCheckBox::toggled, this, [ this ]( bool checked )
-	{
-		if (settingLogVisible_)
-			return;
-		logView_->setVisible( checked );
-		emit logVisibilityChanged( checked );
 	});
 }
 
@@ -1695,9 +1662,5 @@ void CacowardsTab::setStatus( const QString & text )
 
 void CacowardsTab::logMessage( const QString & message )
 {
-	logView_->appendPlainText( QString( "[%1] %2" ).arg( QTime::currentTime().toString( "HH:mm:ss" ) ).arg( message ) );
-
-	// keep the log scrolled to the newest entry
-	if (QScrollBar * bar = logView_->verticalScrollBar())
-		bar->setValue( bar->maximum() );
+	emit activityLogged( message );
 }
