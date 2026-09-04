@@ -792,6 +792,12 @@ const QString & getLinuxDesktopEnv()
 	return desktopEnv;
 }
 
+// SteamOS sets the STEAM_DECK environment variable on the device (both in game mode and desktop mode).
+bool isSteamDeck()
+{
+	return qEnvironmentVariable("STEAM_DECK") == QStringLiteral("1");
+}
+
 QList< MonitorInfo > listMonitors()
 {
 	QList< MonitorInfo > monitors;

@@ -136,6 +136,10 @@ QStringList findDoomEngines();
 
 const QString & getLinuxDesktopEnv();
 
+/// Returns whether this application is running on a Steam Deck (SteamOS).
+/** Recognized both in Steam Deck game mode and in desktop mode. */
+bool isSteamDeck();
+
 QList< MonitorInfo > listMonitors();
 
 

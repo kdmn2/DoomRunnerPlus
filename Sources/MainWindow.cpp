@@ -18,6 +18,8 @@
 #include "Dialogs/CompatOptsDialog.hpp"
 #include "Dialogs/ProcessOutputWindow.hpp"
 #include <QColorDialog>
+#include <QGuiApplication>
+#include <QScreen>
 
 #include "AppVersion.hpp"  // window title
 #include "OptionsSerializer.hpp"
@@ -2024,7 +2026,8 @@ void MainWindow::restorePreset( Preset & preset )
 	ui->presetCmdArgsLine->setText( preset.cmdArgs );
 
 	// restore per-preset launcher tweaks
-	ui->gamescopeChkBox->setChecked( preset.useGamescope );
+	// On a Steam Deck the engine is always launched via gamescope, so the toggle is forced on (and disabled).
+	ui->gamescopeChkBox->setChecked( os::isSteamDeck() || preset.useGamescope );
 
 	restoreEnvVars( preset.envVars, ui->presetEnvVarTable );
 
@@ -2510,6 +2513,19 @@ void MainWindow::restoreWindowGeometry( const WindowGeometry & geometry )
 		newGeometry.setSize({ geometry.width, geometry.height });
 	}
 
+	// Make sure the window fits the current screen, so that a geometry saved on a larger
+	// monitor does not leave part of the window off-screen (common on small screens like the Steam Deck).
+	if (const QScreen * screen = QGuiApplication::screenAt( newGeometry.center() ))
+	{
+		const QRect avail = screen->availableGeometry();
+		newGeometry.setWidth(  qMin( newGeometry.width(),  avail.width() ) );
+		newGeometry.setHeight( qMin( newGeometry.height(), avail.height() ) );
+		if (newGeometry.right()  > avail.right())
+			newGeometry.moveLeft( avail.right() - newGeometry.width() + 1 );
+		if (newGeometry.bottom() > avail.bottom())
+			newGeometry.moveTop( avail.bottom() - newGeometry.height() + 1 );
+	}
+
 	this->setGeometry( newGeometry );
 }
 
@@ -2950,7 +2966,8 @@ void MainWindow::togglePresetSubWidgets( const Preset * selectedPreset )
 	ui->modGrpBox->setEnabled( selectedPreset != nullptr );
 
 	ui->presetCmdArgsLine->setEnabled( selectedPreset != nullptr );
-	ui->gamescopeChkBox->setEnabled( selectedPreset != nullptr );
+	// gamescope is always used on a Steam Deck, so there's nothing to toggle there
+	ui->gamescopeChkBox->setEnabled( selectedPreset != nullptr && !os::isSteamDeck() );
 
 	// Launch Options tab
 
@@ -5904,9 +5921,18 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 
 	// Wrap the whole command in a gamescope fullscreen instance, so that on Steam Deck / handhelds
 	// the engine always gets a visible, focused window instead of opening an invisible one in the background.
+	// On a Steam Deck this is always done automatically (the per-preset toggle only matters on other platforms).
  #if !IS_WINDOWS && !IS_MACOS
-	if (selectedPreset && selectedPreset->useGamescope)
-		prependCommandWith( cmd, "gamescope -f -e --", opts.quotePaths );
+	if (os::isSteamDeck() || (selectedPreset && selectedPreset->useGamescope))
+	{
+		// -e enables Steam integration; on SteamOS the Steam client is always running, while
+		//   a custom-Linux user who enables gamescope for other reasons might not have Steam.
+		QString gamescopeCmd = QStringLiteral( "gamescope -f" );
+		if (os::isSteamDeck())
+			gamescopeCmd += QStringLiteral( " -e" );
+		gamescopeCmd += QStringLiteral( " --" );
+		prependCommandWith( cmd, gamescopeCmd, opts.quotePaths );
+	}
  #endif
 
 	//------------------------------------------------------------------------------
