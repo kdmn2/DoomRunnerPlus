@@ -198,6 +198,10 @@ struct LaunchOptions
 	QString demoFile_resumeFrom;
 	QString demoFile_resumeTo;
 
+	bool noAutoLoad = false;      ///< -noautoload
+	bool noAutoExec = false;      ///< -noautoexec
+	bool allowDuplicates = false; ///< -allowduplicates
+
 	QJsonObject serialize() const;
 	void deserialize( const JsonObjectCtx & optsJs );
 };
@@ -239,6 +243,10 @@ struct GameplayOptions : public GameplayDetails  // inherited instead of include
 	bool monstersRespawn = false;
 	bool pistolStart = false;
 	bool allowCheats = false;
+
+	uint timeLimit = 0;    ///< -timer <minutes> (0 = off)
+	uint turbo = 0;        ///< -turbo <percent> (0 = off)
+	QString playerClass;   ///< +playerclass <name>
 
 	void assign( const GameplayDetails & other ) { static_cast< GameplayDetails & >( *this ) = other; }
 
@@ -284,6 +292,12 @@ struct VideoOptions
 	uint resolutionY = 0;
 	bool showFPS = false;
 
+	int rendererIdx = 0;   ///< 0 = Auto/default, 1 = OpenGL (-gl), 2 = Vulkan (-vulkan)
+	bool fullscreen = false;   ///< +vid_fullscreen 1
+	bool vsync = false;        ///< +vid_vsync 1
+	bool widescreen = false;   ///< +vid_widescreen 1
+	uint maxFps = 0;           ///< +vid_maxfps (0 = off)
+
 	QJsonObject serialize() const;
 	void deserialize( const JsonObjectCtx & optsJs );
 };
@@ -293,6 +307,11 @@ struct AudioOptions
 	bool noSound = false;
 	bool noSFX = false;
 	bool noMusic = false;
+
+	double sfxVolume = 1.0;       ///< +snd_sfxvolume
+	double musicVolume = 1.0;     ///< +snd_musicvolume
+	QString outputBackend;        ///< +snd_output (empty = default)
+	uint sampleRate = 0;          ///< +snd_samplerate (0 = default)
 
 	QJsonObject serialize() const;
 	void deserialize( const JsonObjectCtx & optsJs );

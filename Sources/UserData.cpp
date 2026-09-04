@@ -304,6 +304,9 @@ QJsonObject LaunchOptions::serialize() const
 	optsJs["demo_file_replay"] = opts.demoFile_replay;
 	optsJs["demo_file_resume_from"] = opts.demoFile_resumeFrom;
 	optsJs["demo_file_resume_to"] = opts.demoFile_resumeTo;
+	optsJs["no_autoload"] = opts.noAutoLoad;
+	optsJs["no_autoexec"] = opts.noAutoExec;
+	optsJs["allow_duplicates"] = opts.allowDuplicates;
 
 	return optsJs;
 }
@@ -320,6 +323,9 @@ void LaunchOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.demoFile_replay = optsJs.getString( "demo_file_replay" );
 	opts.demoFile_resumeFrom = optsJs.getString( "demo_file_resume_from" );
 	opts.demoFile_resumeTo = optsJs.getString( "demo_file_resume_to" );
+	opts.noAutoLoad = optsJs.getBool( "no_autoload", opts.noAutoLoad );
+	opts.noAutoExec = optsJs.getBool( "no_autoexec", opts.noAutoExec );
+	opts.allowDuplicates = optsJs.getBool( "allow_duplicates", opts.allowDuplicates );
 }
 
 QJsonObject MultiplayerOptions::serialize() const
@@ -373,6 +379,9 @@ QJsonObject GameplayOptions::serialize() const
 	optsJs["monsters_respawn"] = opts.monstersRespawn;
 	optsJs["pistol_start"] = opts.pistolStart;
 	optsJs["allow_cheats"] = opts.allowCheats;
+	optsJs["time_limit"] = int( opts.timeLimit );
+	optsJs["turbo"] = int( opts.turbo );
+	optsJs["player_class"] = opts.playerClass;
 	optsJs["dmflags1"] = qint64( opts.dmflags1 );
 	optsJs["dmflags2"] = qint64( opts.dmflags2 );
 	optsJs["dmflags3"] = qint64( opts.dmflags3 );
@@ -391,6 +400,9 @@ void GameplayOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.monstersRespawn = optsJs.getBool( "monsters_respawn", opts.monstersRespawn );
 	opts.pistolStart = optsJs.getBool( "pistol_start", opts.pistolStart );
 	opts.allowCheats = optsJs.getBool( "allow_cheats", opts.allowCheats );
+	opts.timeLimit = optsJs.getUInt( "time_limit", opts.timeLimit );
+	opts.turbo = optsJs.getUInt( "turbo", opts.turbo );
+	opts.playerClass = optsJs.getString( "player_class" );
 	opts.dmflags1 = optsJs.getInt( "dmflags1", opts.dmflags1 );
 	opts.dmflags2 = optsJs.getInt( "dmflags2", opts.dmflags2 );
 	opts.dmflags3 = optsJs.getInt( "dmflags3", opts.dmflags3 );
@@ -456,6 +468,11 @@ QJsonObject VideoOptions::serialize() const
 	optsJs["resolution_x"] = qint64( opts.resolutionX );
 	optsJs["resolution_y"] = qint64( opts.resolutionY );
 	optsJs["show_fps"] = opts.showFPS;
+	optsJs["renderer_idx"] = opts.rendererIdx;
+	optsJs["fullscreen"] = opts.fullscreen;
+	optsJs["vsync"] = opts.vsync;
+	optsJs["widescreen"] = opts.widescreen;
+	optsJs["max_fps"] = qint64( opts.maxFps );
 
 	return optsJs;
 }
@@ -468,6 +485,11 @@ void VideoOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.resolutionX = optsJs.getUInt( "resolution_x", opts.resolutionX );
 	opts.resolutionY = optsJs.getUInt( "resolution_y", opts.resolutionY );
 	opts.showFPS = optsJs.getBool( "show_fps", opts.showFPS );
+	opts.rendererIdx = optsJs.getInt( "renderer_idx", opts.rendererIdx );
+	opts.fullscreen = optsJs.getBool( "fullscreen", opts.fullscreen );
+	opts.vsync = optsJs.getBool( "vsync", opts.vsync );
+	opts.widescreen = optsJs.getBool( "widescreen", opts.widescreen );
+	opts.maxFps = optsJs.getUInt( "max_fps", opts.maxFps );
 }
 
 QJsonObject AudioOptions::serialize() const
@@ -478,6 +500,10 @@ QJsonObject AudioOptions::serialize() const
 	optsJs["no_sound"] = opts.noSound;
 	optsJs["no_sfx"] = opts.noSFX;
 	optsJs["no_music"] = opts.noMusic;
+	optsJs["sfx_volume"] = opts.sfxVolume;
+	optsJs["music_volume"] = opts.musicVolume;
+	optsJs["output_backend"] = opts.outputBackend;
+	optsJs["sample_rate"] = qint64( opts.sampleRate );
 
 	return optsJs;
 }
@@ -489,6 +515,10 @@ void AudioOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.noSound = optsJs.getBool( "no_sound", opts.noSound );
 	opts.noSFX = optsJs.getBool( "no_sfx", opts.noSFX );
 	opts.noMusic = optsJs.getBool( "no_music", opts.noMusic );
+	opts.sfxVolume = optsJs.getDouble( "sfx_volume", opts.sfxVolume );
+	opts.musicVolume = optsJs.getDouble( "music_volume", opts.musicVolume );
+	opts.outputBackend = optsJs.getString( "output_backend" );
+	opts.sampleRate = optsJs.getUInt( "sample_rate", opts.sampleRate );
 }
 
 QJsonObject serialize( const EnvVars & envVars )

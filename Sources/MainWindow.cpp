@@ -1050,6 +1050,36 @@ MainWindow::MainWindow()
 	connect( ui->pistolStartChkBox, &QCheckBox::toggled, this, &ThisClass::onPistolStartToggled );
 	connect( ui->allowCheatsChkBox, &QCheckBox::toggled, this, &ThisClass::onAllowCheatsToggled );
 	connect( ui->gameOptsBtn, &QPushButton::clicked, this, &ThisClass::onGameOptsBtnClicked );
+	connect( ui->gameplayTimeLimitSpinBox, QOverload<int>::of( &QSpinBox::valueChanged ), this, [ this ]( int value )
+	{
+		STORE_GAMEPLAY_OPTION( .timeLimit, uint( value ) );
+		updateLaunchCommand();
+	});
+	connect( ui->turboSpinBox, QOverload<int>::of( &QSpinBox::valueChanged ), this, [ this ]( int value )
+	{
+		STORE_GAMEPLAY_OPTION( .turbo, uint( value ) );
+		updateLaunchCommand();
+	});
+	connect( ui->playerClassLine, &QLineEdit::textChanged, this, [ this ]( const QString & text )
+	{
+		STORE_GAMEPLAY_OPTION( .playerClass, text.trimmed() );
+		updateLaunchCommand();
+	});
+	connect( ui->noAutoLoadChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_LAUNCH_OPTION( .noAutoLoad, checked );
+		updateLaunchCommand();
+	});
+	connect( ui->noAutoExecChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_LAUNCH_OPTION( .noAutoExec, checked );
+		updateLaunchCommand();
+	});
+	connect( ui->allowDuplicatesChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_LAUNCH_OPTION( .allowDuplicates, checked );
+		updateLaunchCommand();
+	});
 	connect( ui->compatOptsBtn, &QPushButton::clicked, this, &ThisClass::onCompatOptsBtnClicked );
 	connect( ui->compatModeCmbBox, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &ThisClass::onCompatModeSelected );
 
@@ -1073,11 +1103,57 @@ MainWindow::MainWindow()
 	connect( ui->resolutionXLine, &QLineEdit::textChanged, this, &ThisClass::onResolutionXChanged );
 	connect( ui->resolutionYLine, &QLineEdit::textChanged, this, &ThisClass::onResolutionYChanged );
 	connect( ui->showFpsChkBox, &QCheckBox::toggled, this, &ThisClass::onShowFpsToggled );
+	connect( ui->rendererCmbBox, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, [ this ]( int idx )
+	{
+		STORE_VIDEO_OPTION( .rendererIdx, idx );
+		updateLaunchCommand();
+	});
+	connect( ui->fullscreenChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_VIDEO_OPTION( .fullscreen, checked );
+		updateLaunchCommand();
+	});
+	connect( ui->vsyncChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_VIDEO_OPTION( .vsync, checked );
+		updateLaunchCommand();
+	});
+	connect( ui->widescreenChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_VIDEO_OPTION( .widescreen, checked );
+		updateLaunchCommand();
+	});
+	connect( ui->maxFpsSpinBox, QOverload<int>::of( &QSpinBox::valueChanged ), this, [ this ]( int value )
+	{
+		STORE_VIDEO_OPTION( .maxFps, uint( value ) );
+		updateLaunchCommand();
+	});
 
 	// audio
 	connect( ui->noSoundChkBox, &QCheckBox::toggled, this, &ThisClass::onNoSoundToggled );
 	connect( ui->noSfxChkBox, &QCheckBox::toggled, this, &ThisClass::onNoSFXToggled);
 	connect( ui->noMusicChkBox, &QCheckBox::toggled, this, &ThisClass::onNoMusicToggled );
+	connect( ui->sfxVolumeSpinBox, QOverload<double>::of( &QDoubleSpinBox::valueChanged ), this, [ this ]( double value )
+	{
+		STORE_AUDIO_OPTION( .sfxVolume, value );
+		updateLaunchCommand();
+	});
+	connect( ui->musicVolumeSpinBox, QOverload<double>::of( &QDoubleSpinBox::valueChanged ), this, [ this ]( double value )
+	{
+		STORE_AUDIO_OPTION( .musicVolume, value );
+		updateLaunchCommand();
+	});
+	connect( ui->sampleRateSpinBox, QOverload<int>::of( &QSpinBox::valueChanged ), this, [ this ]( int value )
+	{
+		STORE_AUDIO_OPTION( .sampleRate, uint( value ) );
+		updateLaunchCommand();
+	});
+	connect( ui->outputBackendCmbBox, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, [ this ]( int idx )
+	{
+		const QString backend = idx <= 0 ? QString() : ui->outputBackendCmbBox->currentText();
+		STORE_AUDIO_OPTION( .outputBackend, backend );
+		updateLaunchCommand();
+	});
 
 	// setup the rest of widgets
 
@@ -2400,6 +2476,11 @@ void MainWindow::restoreLaunchAndMultOptions( LaunchOptions & launchOpts, const 
 	ui->playerNameLine->setText( multOpts.playerName );
 	if (multOpts.playerColor.isValid())
 		wdg::setButtonColor( ui->playerColorBtn, multOpts.playerColor );
+
+	// loading toggles
+	ui->noAutoLoadChkBox->setChecked( launchOpts.noAutoLoad );
+	ui->noAutoExecChkBox->setChecked( launchOpts.noAutoExec );
+	ui->allowDuplicatesChkBox->setChecked( launchOpts.allowDuplicates );
 }
 
 void MainWindow::restoreGameplayOptions( const GameplayOptions & opts )
@@ -2415,6 +2496,9 @@ void MainWindow::restoreGameplayOptions( const GameplayOptions & opts )
 	ui->monstersRespawnChkBox->setChecked( opts.monstersRespawn );
 	ui->pistolStartChkBox->setChecked( opts.pistolStart );
 	ui->allowCheatsChkBox->setChecked( opts.allowCheats );
+	ui->gameplayTimeLimitSpinBox->setValue( int( opts.timeLimit ) );
+	ui->turboSpinBox->setValue( int( opts.turbo ) );
+	ui->playerClassLine->setText( opts.playerClass );
 }
 
 void MainWindow::restoreCompatibilityOptions( const CompatibilityOptions & opts )
@@ -2440,6 +2524,11 @@ void MainWindow::restoreVideoOptions( const VideoOptions & opts )
 	if (opts.resolutionY > 0)
 		ui->resolutionYLine->setText( QString::number( opts.resolutionY ) );
 	ui->showFpsChkBox->setChecked( opts.showFPS );
+	ui->rendererCmbBox->setCurrentIndex( qBound( 0, opts.rendererIdx, ui->rendererCmbBox->count() - 1 ) );
+	ui->fullscreenChkBox->setChecked( opts.fullscreen );
+	ui->vsyncChkBox->setChecked( opts.vsync );
+	ui->widescreenChkBox->setChecked( opts.widescreen );
+	ui->maxFpsSpinBox->setValue( int( opts.maxFps ) );
 }
 
 void MainWindow::restoreAudioOptions( const AudioOptions & opts )
@@ -2447,6 +2536,10 @@ void MainWindow::restoreAudioOptions( const AudioOptions & opts )
 	ui->noSoundChkBox->setChecked( opts.noSound );
 	ui->noSfxChkBox->setChecked( opts.noSFX );
 	ui->noMusicChkBox->setChecked( opts.noMusic );
+	ui->sfxVolumeSpinBox->setValue( opts.sfxVolume );
+	ui->musicVolumeSpinBox->setValue( opts.musicVolume );
+	ui->sampleRateSpinBox->setValue( int( opts.sampleRate ) );
+	ui->outputBackendCmbBox->setCurrentIndex( ui->outputBackendCmbBox->findText( opts.outputBackend ) < 0 ? 0 : ui->outputBackendCmbBox->findText( opts.outputBackend ) );
 }
 
 void MainWindow::restoreGlobalOptions( const GlobalOptions & opts )
@@ -3012,6 +3105,9 @@ void MainWindow::clearPresetSubWidgets()
 	if (settings.launchOptsStorage == StoreToPreset)
 	{
 		ui->launchMode_default->click();
+		ui->noAutoLoadChkBox->setChecked( false );
+		ui->noAutoExecChkBox->setChecked( false );
+		ui->allowDuplicatesChkBox->setChecked( false );
 	}
 
 	if (settings.gameOptsStorage == StoreToPreset)
@@ -3021,6 +3117,9 @@ void MainWindow::clearPresetSubWidgets()
 		ui->monstersRespawnChkBox->setChecked( false );
 		ui->pistolStartChkBox->setChecked( false );
 		ui->allowCheatsChkBox->setChecked( false );
+		ui->gameplayTimeLimitSpinBox->setValue( 0 );
+		ui->turboSpinBox->setValue( 0 );
+		ui->playerClassLine->clear();
 	}
 
 	if (settings.compatOptsStorage == StoreToPreset)
@@ -3048,6 +3147,11 @@ void MainWindow::clearPresetSubWidgets()
 		ui->resolutionXLine->clear();
 		ui->resolutionYLine->clear();
 		ui->showFpsChkBox->setChecked( false );
+		ui->rendererCmbBox->setCurrentIndex( 0 );
+		ui->fullscreenChkBox->setChecked( false );
+		ui->vsyncChkBox->setChecked( false );
+		ui->widescreenChkBox->setChecked( false );
+		ui->maxFpsSpinBox->setValue( 0 );
 	}
 
 	if (settings.audioOptsStorage == StoreToPreset)
@@ -3055,6 +3159,10 @@ void MainWindow::clearPresetSubWidgets()
 		ui->noSoundChkBox->setChecked( false );
 		ui->noSfxChkBox->setChecked( false );
 		ui->noMusicChkBox->setChecked( false );
+		ui->sfxVolumeSpinBox->setValue( 1.0 );
+		ui->musicVolumeSpinBox->setValue( 1.0 );
+		ui->sampleRateSpinBox->setValue( 0 );
+		ui->outputBackendCmbBox->setCurrentIndex( 0 );
 	}
 
 	// Environment tab
@@ -4167,6 +4275,14 @@ void MainWindow::toggleOptionsSubwidgets( LaunchMode mode )
 	ui->noMonstersChkBox->setEnabled( enableBasicGameplayOptions );
 	ui->fastMonstersChkBox->setEnabled( enableBasicGameplayOptions );
 	ui->monstersRespawnChkBox->setEnabled( enableBasicGameplayOptions );
+
+	// extra gameplay / loading options
+	ui->gameplayTimeLimitSpinBox->setEnabled( enableBasicGameplayOptions );
+	ui->turboSpinBox->setEnabled( enableBasicGameplayOptions );
+	ui->playerClassLine->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
+	ui->noAutoLoadChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
+	ui->noAutoExecChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
+	ui->allowDuplicatesChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 
 	ui->pistolStartChkBox->setEnabled( shouldEnablePistolStart( mode, selectedEngine ) );
 	ui->allowCheatsChkBox->setEnabled( shouldEnableAllowCheats( mode, selectedEngine ) );
@@ -5800,6 +5916,19 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 	if (ui->gameOptsBtn->isEnabled() && activeGameOpts.dmflags3 != 0)
 		cmd.arguments << "+dmflags3" << QString::number( activeGameOpts.dmflags3 );
 
+	if (ui->gameplayTimeLimitSpinBox->isEnabled() && ui->gameplayTimeLimitSpinBox->value() > 0)
+		cmd.arguments << "-timer" << ui->gameplayTimeLimitSpinBox->text();
+	if (ui->turboSpinBox->isEnabled() && ui->turboSpinBox->value() > 0)
+		cmd.arguments << "-turbo" << ui->turboSpinBox->text();
+	if (ui->playerClassLine->isEnabled() && !ui->playerClassLine->text().isEmpty())
+		cmd.arguments << "+playerclass" << ui->playerClassLine->text();
+	if (ui->noAutoLoadChkBox->isEnabled() && ui->noAutoLoadChkBox->isChecked())
+		cmd.arguments << "-noautoload";
+	if (ui->noAutoExecChkBox->isEnabled() && ui->noAutoExecChkBox->isChecked())
+		cmd.arguments << "-noautoexec";
+	if (ui->allowDuplicatesChkBox->isEnabled() && ui->allowDuplicatesChkBox->isChecked())
+		cmd.arguments << "-allowduplicates";
+
 	const CompatibilityOptions & activeCompatOpts = activeCompatOptions();
 	if (ui->compatModeCmbBox->isEnabled() && activeCompatOpts.compatMode >= 0)
 		cmd.arguments << engine.getCompatModeArgs( activeCompatOpts.compatMode );
@@ -5900,6 +6029,23 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 		cmd.arguments << "-height" << ui->resolutionYLine->text();
 	if (ui->showFpsChkBox->isEnabled() && ui->showFpsChkBox->isChecked())
 		cmd.arguments << "+vid_fps" << "1";
+	if (ui->rendererCmbBox->isEnabled())
+	{
+		switch (ui->rendererCmbBox->currentIndex())
+		{
+		 case 1: cmd.arguments << "-gl"; break;
+		 case 2: cmd.arguments << "-vulkan"; break;
+		 default: break;
+		}
+	}
+	if (ui->fullscreenChkBox->isEnabled() && ui->fullscreenChkBox->isChecked())
+		cmd.arguments << "+vid_fullscreen" << "1";
+	if (ui->vsyncChkBox->isEnabled() && ui->vsyncChkBox->isChecked())
+		cmd.arguments << "+vid_vsync" << "1";
+	if (ui->widescreenChkBox->isEnabled() && ui->widescreenChkBox->isChecked())
+		cmd.arguments << "+vid_widescreen" << "1";
+	if (ui->maxFpsSpinBox->isEnabled() && ui->maxFpsSpinBox->value() > 0)
+		cmd.arguments << "+vid_maxfps" << ui->maxFpsSpinBox->text();
 
 	// audio options
 	if (ui->noSoundChkBox->isEnabled() && ui->noSoundChkBox->isChecked())
@@ -5908,6 +6054,14 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 		cmd.arguments << "-nosfx";
 	if (ui->noMusicChkBox->isEnabled() && ui->noMusicChkBox->isChecked())
 		cmd.arguments << "-nomusic";
+	if (ui->sfxVolumeSpinBox->isEnabled() && ui->sfxVolumeSpinBox->value() != 1.0)
+		cmd.arguments << "+snd_sfxvolume" << QString::number( ui->sfxVolumeSpinBox->value(), 'f', 2 );
+	if (ui->musicVolumeSpinBox->isEnabled() && ui->musicVolumeSpinBox->value() != 1.0)
+		cmd.arguments << "+snd_musicvolume" << QString::number( ui->musicVolumeSpinBox->value(), 'f', 2 );
+	if (ui->sampleRateSpinBox->isEnabled() && ui->sampleRateSpinBox->value() > 0)
+		cmd.arguments << "+snd_samplerate" << ui->sampleRateSpinBox->text();
+	if (ui->outputBackendCmbBox->isEnabled() && ui->outputBackendCmbBox->currentIndex() > 0)
+		cmd.arguments << "+snd_output" << ui->outputBackendCmbBox->currentText();
 
 	//-- additional custom command line arguments ----------------------------------
 
