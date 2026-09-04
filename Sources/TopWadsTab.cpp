@@ -500,6 +500,7 @@ void TopWadsTab::buildTree( bool restoreExpansion )
 			umbrella = new QTreeWidgetItem( tree_, QStringList{ entry.umbrella } );
 			umbrella->setFlags( umbrella->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate );
 			umbrella->setCheckState( 0, Qt::Unchecked );
+			umbrella->setExpanded( true );  // keep the source branches visible so the grouping is obvious
 			umbrellaNodes.insert( entry.umbrella, umbrella );
 		}
 
