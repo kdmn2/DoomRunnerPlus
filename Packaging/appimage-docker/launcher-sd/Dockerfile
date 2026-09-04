@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential make g++ \
       qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools \
-      libqt6qml6 libqt6quick6 \
+      libqt6qml6 libqt6quick6 qt6-wayland \
       qml6-module-qtqml qml6-module-qtquick qml6-module-qtquick-window \
       qml6-module-qtquick-templates qml6-module-qtqml-workerscript \
       libgl1-mesa-dev libglx-dev libopengl-dev \

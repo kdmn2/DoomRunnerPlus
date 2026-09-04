@@ -48,6 +48,12 @@ docker run --rm \
 
     mkdir -p squashfs-root/usr/qml
     cp -a /usr/lib/x86_64-linux-gnu/qt6/qml/. squashfs-root/usr/qml/
+
+    # linuxdeploy only bundles libs directly linked by the binary; the QML/Wayland pieces
+    # (QtQuick, QtQmlModels, QtOpenGL, QtWaylandClient) are pulled in by the QML/wayland plugins,
+    # so copy the full (consistent) set of Qt6 libs and platform plugins into the AppImage.
+    cp -a /usr/lib/x86_64-linux-gnu/libQt6*.so* squashfs-root/usr/lib/
+    cp -a /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms/*.so squashfs-root/usr/plugins/platforms/
     # AppRun is a symlink to the binary; --remove-destination replaces it with a real script
     # instead of writing through the symlink and clobbering usr/bin/DoomRunnerSD.
     cp --remove-destination /app/DoomRunner/Packaging/appimage-docker/launcher-sd/AppRun squashfs-root/AppRun
