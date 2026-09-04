@@ -69,6 +69,7 @@ constexpr const char * kWaybackYearPrefix = "https://web.archive.org/web/2025/ht
 constexpr const char * kDownloadMirrors [] = {
 	"https://youfailit.net/pub/idgames/",
 	"https://ftp.gamers.org/pub/idgames/",
+	"https://www.gamers.org/pub/idgames/",   // same archive as ftp.gamers.org, extra fallback
 };
 
 /// Maps a doomwiki section heading to one of the supported award categories.
