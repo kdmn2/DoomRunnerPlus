@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Doom Runner Plus (Steam Deck Launcher)
+Comment=Minimal gamepad launcher for Doom Runner Plus
+Exec=DoomRunnerSD
+Icon=DoomRunnerSD
+Terminal=false
+Categories=Game;ActionGame;
+Keywords=Doom;launcher;
