@@ -672,6 +672,8 @@ QJsonObject ModSettings::serialize() const
 	settingsJs["cacowards_delete_after_extract"] = settings.cacowardsDeleteAfterExtract;
 	settingsJs["cacowards_parallel"] = settings.cacowardsParallel;
 	settingsJs["cacowards_expanded_nodes"] = serializeStringList( settings.cacowardsExpandedNodes );
+	settingsJs["top_wads_download_dir"] = settings.topWadsDownloadDir;
+	settingsJs["top_wads_expanded_nodes"] = serializeStringList( settings.topWadsExpandedNodes );
 	settingsJs["show_icons"] = settings.showIcons;
 
 	return settingsJs;
@@ -690,6 +692,9 @@ void ModSettings::deserialize( const JsonObjectCtx & settingsJs )
 	settings.cacowardsParallel = settingsJs.getBool( "cacowards_parallel", settings.cacowardsParallel );
 	if (JsonArrayCtx nodesJs = settingsJs.getArray( "cacowards_expanded_nodes" ))
 		settings.cacowardsExpandedNodes = deserializeStringList( nodesJs );
+	settings.topWadsDownloadDir = settingsJs.getString( "top_wads_download_dir" );
+	if (JsonArrayCtx nodesJs = settingsJs.getArray( "top_wads_expanded_nodes" ))
+		settings.topWadsExpandedNodes = deserializeStringList( nodesJs );
 	settings.showIcons = settingsJs.getBool( "show_icons", settings.showIcons );
 }
 

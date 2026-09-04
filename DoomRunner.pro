@@ -101,6 +101,7 @@ HEADERS += \
 	Sources/Essential.hpp \
 	Sources/CacowardsTab.hpp \
 	Sources/IdgamesTab.hpp \
+	Sources/TopWadsTab.hpp \
 	Sources/MainWindowPtr.hpp \
 	Sources/MainWindow.hpp \
 	Sources/OptionsSerializer.hpp \
@@ -159,6 +160,7 @@ SOURCES += \
 	Sources/EngineTraits.cpp \
 	Sources/CacowardsTab.cpp \
 	Sources/IdgamesTab.cpp \
+	Sources/TopWadsTab.cpp \
 	Sources/MainWindow.cpp \
 	Sources/OptionsSerializer.cpp \
 	Sources/Themes.cpp \

@@ -33,6 +33,7 @@ class QLineEdit;
 class QShortcut;
 class IdgamesTab;
 class CacowardsTab;
+class TopWadsTab;
 
 #include <memory>
 
@@ -216,6 +217,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 
 	void applyCacowardsSettings();
 	void applyIdgamesSettings();
+	void applyTopWadsSettings();
 
 	void loadMonitorInfo( QComboBox * box );
 
@@ -406,6 +408,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	SearchPanel * presetSearchPanel = nullptr;
 	IdgamesTab * idgamesTab = nullptr;
 	CacowardsTab * cacowardsTab = nullptr;
+	TopWadsTab * topWadsTab = nullptr;
 
 	QAction * hideLabelAction = nullptr;
 	QAction * refreshMapDirAction = nullptr;

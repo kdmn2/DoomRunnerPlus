@@ -29,6 +29,7 @@
 #include "DoomFiles.hpp"
 #include "IdgamesTab.hpp"
 #include "CacowardsTab.hpp"
+#include "TopWadsTab.hpp"
 
 #include <QTabWidget>
 
@@ -63,6 +64,7 @@
 static const char defaultOptionsFileName [] = "options.json";
 static const char defaultCacheFileName [] = "file_info_cache.json";
 static const char defaultCacowardsFileName [] = "cacowards.json";
+static const char defaultTopWadsFileName [] = "top_wads.json";
 
 enum EnvVarsColumn
 {
@@ -983,9 +985,25 @@ MainWindow::MainWindow()
 		scheduleSavingOptions();
 	});
 
-	// group both download tabs under the top-level "WAD Downloader" tab
+	// setup the "top lists" download tab
+	topWadsTab = new TopWadsTab( this );
+	applyTopWadsSettings();
+	int topWadsTabIdx = downloaderTabs->addTab( topWadsTab, "Top Lists" );
+	downloaderTabs->setTabToolTip( topWadsTabIdx, "Browse and download WADs from Doomworld's top-list articles" );
+	connect( topWadsTab, &TopWadsTab::targetDirChanged, this, [ this ]( const QString & dir )
+	{
+		modSettings.topWadsDownloadDir = dir;
+		scheduleSavingOptions();
+	});
+	connect( topWadsTab, &TopWadsTab::expansionChanged, this, [ this ]()
+	{
+		modSettings.topWadsExpandedNodes = topWadsTab->expandedNodes();
+		scheduleSavingOptions();
+	});
+
+	// group all download tabs under the top-level "WAD Downloader" tab
 	int downloadTabIdx = ui->tabWidget->addTab( downloaderTabs, "WAD Downloader" );
-	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive and the Cacowards" );
+	ui->tabWidget->setTabToolTip( downloadTabIdx, "Browse and download WADs from the /idgames archive, the Cacowards and the top-list articles" );
 
 	// setup combo-boxes
 
@@ -1426,6 +1444,13 @@ void MainWindow::applyIdgamesSettings()
 	idgamesTab->setMapSourceDir( mapSettings.dir );
 }
 
+void MainWindow::applyTopWadsSettings()
+{
+	topWadsTab->setTargetDir( !modSettings.topWadsDownloadDir.isEmpty() ? modSettings.topWadsDownloadDir : modSettings.cacowardsDownloadDir );
+	topWadsTab->setExpandedNodes( modSettings.topWadsExpandedNodes );
+	topWadsTab->setMapSourceDir( mapSettings.dir );
+}
+
 void MainWindow::loadMonitorInfo( QComboBox * box )
 {
 	const auto monitors = os::listMonitors();
@@ -1511,6 +1536,7 @@ void MainWindow::initAppDataDir()
 	optionsFilePath = appDataDir.filePath( defaultOptionsFileName );
 	cacheFilePath = appDataDir.filePath( defaultCacheFileName );
 	cacowardsTab->setDataFilePath( appDataDir.filePath( defaultCacowardsFileName ) );
+	topWadsTab->setDataFilePath( appDataDir.filePath( defaultTopWadsFileName ) );
 }
 
 // This is called when the window layout is initialized and widget sizes calculated,
@@ -2043,6 +2069,7 @@ void MainWindow::restoreLoadedOptions( OptionsToLoad && opts )
 	// Cacowards / IdGames tab settings are loaded from options *after* the tabs were created, so they must be re-applied here.
 	applyCacowardsSettings();
 	applyIdgamesSettings();
+	applyTopWadsSettings();
 
 	restoringOptionsInProgress = false;
 
@@ -2724,6 +2751,7 @@ void MainWindow::runSetupDialog()
 		resetMapDirModelAndView();
 		cacowardsTab->setMapSourceDir( mapSettings.dir );
 		idgamesTab->setMapSourceDir( mapSettings.dir );
+		topWadsTab->setMapSourceDir( mapSettings.dir );
 
 		// select back the previously selected items
 		wdg::setCurrentItemByID( ui->engineCmbBox, engineModel, currentEngine );

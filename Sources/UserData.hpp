@@ -382,6 +382,8 @@ struct ModSettings
 	bool cacowardsDeleteAfterExtract = false;///< delete the original archive after extracting it
 	bool cacowardsParallel = false;          ///< download up to 4 Cacowards files at the same time
 	QStringList cacowardsExpandedNodes;      ///< Cacowards tree nodes that were expanded (paths like "2004"/"2004/Winners")
+	QString topWadsDownloadDir;              ///< directory where WADs from the "top lists" are saved
+	QStringList topWadsExpandedNodes;        ///< top-lists tree nodes that were expanded
 	bool showIcons = true;   ///< whether the mod list should show file-system icons provided by the OS
 
 	QJsonObject serialize() const;
