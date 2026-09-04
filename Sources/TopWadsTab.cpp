@@ -193,12 +193,16 @@ void TopWadsTab::buildUi()
 	refreshBtn_ = new QPushButton( "Refresh", this );
 	refreshBtn_->setToolTip( "Re-download the list from doomwiki (via the Wayback Machine)" );
 
+	generateListBtn_ = new QPushButton( "Generate list", this );
+	generateListBtn_->setToolTip( "Open doomwiki's export page in your browser so you can download the XML yourself" );
+
 	importBtn_ = new QPushButton( "Import...", this );
 	importBtn_->setToolTip( "Load the list from a doomwiki export XML file (use the doomwiki 'Export' page)" );
 
 	QHBoxLayout * refreshRow = new QHBoxLayout;
 	refreshRow->addStretch( 1 );
 	refreshRow->addWidget( refreshBtn_ );
+	refreshRow->addWidget( generateListBtn_ );
 	refreshRow->addWidget( importBtn_ );
 
 	tree_ = new QTreeWidget( this );
@@ -297,6 +301,7 @@ void TopWadsTab::buildUi()
 	//-- signal/slot wiring ------------------------------------------------------
 
 	connect( refreshBtn_, &QPushButton::clicked, this, &TopWadsTab::refresh );
+	connect( generateListBtn_, &QPushButton::clicked, this, &TopWadsTab::generateList );
 	connect( importBtn_, &QPushButton::clicked, this, &TopWadsTab::importExportedXml );
 	connect( tree_, &QTreeWidget::currentItemChanged, this, &TopWadsTab::onCurrentItemChanged );
 	connect( tree_, &QTreeWidget::itemChanged, this, &TopWadsTab::onItemChanged );
@@ -654,6 +659,29 @@ void TopWadsTab::importExportedXml()
 	emit expansionChanged();
 	setStatus( QString( "Imported %1 entries from \"%2\"." ).arg( entries_.size() ).arg( filePath ) );
 	logMessage( QString( "Imported %1 entries from \"%2\"." ).arg( entries_.size() ).arg( filePath ) );
+}
+
+void TopWadsTab::generateList()
+{
+	openBrowserExportPage();
+	setStatus( "Opened doomwiki's export page in your browser - click \"Export\" there to download the XML file, then press \"Import...\" here to load it." );
+	logMessage( "Opened doomwiki's export page in your browser." );
+}
+
+void TopWadsTab::openBrowserExportPage()
+{
+	// open doomwiki's Special:Export page in the user's browser with all source pages pre-listed
+	QStringList pageNames;
+	for (int i = 0; i < topListSourceCount(); ++i)
+		pageNames.append( getTopListSource( i ).pageTitle );
+
+	QUrl url( QStringLiteral("https://doomwiki.org/w/index.php") );
+	QUrlQuery query;
+	query.addQueryItem( "title", "Special:Export" );
+	query.addQueryItem( "pages", pageNames.join( '\n' ) );
+	url.setQuery( query );
+
+	QDesktopServices::openUrl( url );
 }
 
 void TopWadsTab::saveDataFile()

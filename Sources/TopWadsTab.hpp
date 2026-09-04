@@ -114,6 +114,7 @@ class TopWadsTab : public QWidget {
  private slots:
 
 	void refresh();
+	void generateList();
 	void importExportedXml();
 	void onCurrentItemChanged( QTreeWidgetItem * current, QTreeWidgetItem * previous );
 	void onItemChanged( QTreeWidgetItem * item, int column );
@@ -158,6 +159,7 @@ class TopWadsTab : public QWidget {
 	void startNextRefresh();
 	void buildTree( bool restoreExpansion = false );
 	void applyExpansionState();
+	void openBrowserExportPage();
 	void setStatus( const QString & text );
 	void logMessage( const QString & message );
 	QString sanitizeFileName( const QString & fileName ) const;
@@ -195,6 +197,7 @@ class TopWadsTab : public QWidget {
 	QPlainTextEdit * detailsView_ = nullptr;
 	QLineEdit * targetDirLine_ = nullptr;
 	QPushButton * refreshBtn_ = nullptr;
+	QPushButton * generateListBtn_ = nullptr;
 	QPushButton * importBtn_ = nullptr;
 	QPushButton * browseBtn_ = nullptr;
 	QPushButton * downloadBtn_ = nullptr;
