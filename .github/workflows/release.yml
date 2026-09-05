@@ -67,6 +67,20 @@ jobs:
             mingw-w64-ucrt-x86_64-jbigkit
             mingw-w64-ucrt-x86_64-libdeflate
             mingw-w64-ucrt-x86_64-xz
+            mingw-w64-ucrt-x86_64-freetype
+            mingw-w64-ucrt-x86_64-harfbuzz
+            mingw-w64-ucrt-x86_64-graphite2
+            mingw-w64-ucrt-x86_64-pcre2
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-brotli
+            mingw-w64-ucrt-x86_64-libb2
+            mingw-w64-ucrt-x86_64-md4c
+            mingw-w64-ucrt-x86_64-double-conversion
+            mingw-w64-ucrt-x86_64-giflib
+            mingw-w64-ucrt-x86_64-icu
+            mingw-w64-ucrt-x86_64-libpsl
+            mingw-w64-ucrt-x86_64-libidn2
+            mingw-w64-ucrt-x86_64-nghttp2
             python
       - name: Install 7-Zip
         shell: powershell
