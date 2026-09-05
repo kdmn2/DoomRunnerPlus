@@ -60,6 +60,13 @@ jobs:
             mingw-w64-ucrt-x86_64-make
             mingw-w64-ucrt-x86_64-qt6-static
             mingw-w64-ucrt-x86_64-minizip
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-libtiff
+            mingw-w64-ucrt-x86_64-libwebp
+            mingw-w64-ucrt-x86_64-lerc
+            mingw-w64-ucrt-x86_64-jbigkit
+            mingw-w64-ucrt-x86_64-libdeflate
+            mingw-w64-ucrt-x86_64-xz
             python
       - name: Install 7-Zip
         shell: powershell
