@@ -79,7 +79,21 @@ if %TARGET_ENV%==legacy if %LINKAGE%==dynamic set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\
 if %TARGET_ENV%==legacy if %LINKAGE%==static  set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\qt5-static\bin\qmake.exe"
 if %TARGET_ENV%==recent if %LINKAGE%==dynamic set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\bin\qmake6.exe"
 if %TARGET_ENV%==recent if %LINKAGE%==static  set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\qt6-static\bin\qmake6.exe"
+
+:: if the expected qmake is missing, hunt for it: the msys2 qt package links
+:: qmake in different places depending on the release, so try several likely
+:: locations before giving up.
 if not exist "%QMAKE%" (
+	set "QMAKE="
+	if exist "%MSYS_ROOT%\%MSYS_ENV%\qt6-static\bin\qmake6.exe" set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\qt6-static\bin\qmake6.exe"
+	if not defined QMAKE if exist "%MSYS_ROOT%\%MSYS_ENV%\bin\qmake6.exe" set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\bin\qmake6.exe"
+	if not defined QMAKE if exist "%MSYS_ROOT%\%MSYS_ENV%\qt5-static\bin\qmake.exe" set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\qt5-static\bin\qmake.exe"
+	if not defined QMAKE if exist "%MSYS_ROOT%\%MSYS_ENV%\bin\qmake.exe" set "QMAKE=%MSYS_ROOT%\%MSYS_ENV%\bin\qmake.exe"
+	if not defined QMAKE (
+		for /f "delims=" %%F in ('dir /b /s "%MSYS_ROOT%\%MSYS_ENV%\qmake*.exe" 2^>nul') do if not defined QMAKE set "QMAKE=%%F"
+	)
+)
+if not defined QMAKE (
 	echo.
 	echo Qt build tools not found: %QMAKE%
 	echo Build aborted.

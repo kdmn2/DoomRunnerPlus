@@ -13,6 +13,10 @@ on:
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
+# Grant the GITHUB_TOKEN write permission so it can create/update the GitHub release.
+permissions:
+  contents: write
+
 jobs:
   # ---------------------------------------------------------------------------
   # Linux AppImage (Steam Deck-compatible, built on Ubuntu 24.04 in a container)
