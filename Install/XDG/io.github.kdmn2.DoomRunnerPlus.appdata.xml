@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>io.github.kdmn2.DoomRunnerPlus</id>
-  <launchable type="desktop-id">DoomRunnerPlus.desktop</launchable>
+  <launchable type="desktop-id">io.github.kdmn2.DoomRunnerPlus.desktop</launchable>
   <name>Doom Runner Plus</name>
   <summary>Preset-oriented graphical launcher of various ported Doom engines (an alternative to ZDL)</summary>
+  <icon type="stock">io.github.kdmn2.DoomRunnerPlus</icon>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <developer id="io.github.kdmn2">
