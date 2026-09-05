@@ -92,7 +92,7 @@ jobs:
       - name: Package (static_exe)
         shell: msys2 {0}
         working-directory: DoomRunner
-        run: cmd.exe //c "Scripts\\2-package.bat \"$WINDOWS_BUILD_DIR\" recent static_exe"
+          run: cmd.exe //c "Scripts\\2-package.bat $WINDOWS_BUILD_DIR recent static_exe"
       - name: Upload to GitHub release
         uses: softprops/action-gh-release@v2
         with:
