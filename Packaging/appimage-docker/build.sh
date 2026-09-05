@@ -29,6 +29,7 @@ docker run --rm \
     bash Scripts/1-build.sh default dynamic plain release
     source /tmp/DoomRunner/build_vars.sh
     bash Scripts/2-package.sh "$BUILD_DIR" Linux x86_64 appimage
+    bash Scripts/2-package.sh "$BUILD_DIR" Linux x86_64 dynamic_exe
   '
 
 echo "==> Done. AppImage:"

@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       qt6-base-dev qt6-base-dev-tools libqt6concurrent6 libqt6network6 \
       libminizip-dev zlib1g-dev \
       libgl1-mesa-dev libglx-dev libopengl-dev \
+      p7zip-full \
       file python3 wget ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /home/builder/Apps \

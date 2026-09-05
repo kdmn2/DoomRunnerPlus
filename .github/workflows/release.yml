@@ -19,22 +19,54 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Linux AppImage (Steam Deck-compatible, built on Ubuntu 24.04 in a container)
+  # Linux: AppImage (Steam Deck-compatible, built on Ubuntu 24.04 in a container)
+  #        plus a plain dynamic-exe zip ("regular" release).
   # ---------------------------------------------------------------------------
-  linux-appimage:
+  linux:
+    name: Linux (AppImage + zip)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           path: DoomRunner
-      - name: Build AppImage
+      - name: Build AppImage and plain zip
         working-directory: DoomRunner
         run: bash Packaging/appimage-docker/build.sh
       - name: Upload to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          files: DoomRunner/Releases/*.AppImage
+          files: |
+            DoomRunner/Releases/*.AppImage
+            DoomRunner/Releases/*.zip
+          overwrite: true
+        env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # Linux Flatpak (sandboxed bundle, built with flatpak-builder from the source)
+  # ---------------------------------------------------------------------------
+  linux-flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: DoomRunner
+      - name: Install Flatpak tooling
+        run: |
+          sudo add-apt-repository -y universe
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Build and package (.flatpak)
+        working-directory: DoomRunner
+        run: |
+          dbus-run-session -- bash Scripts/2-package.sh "$PWD/Builds/Flatpak" Linux x86_64 flatpak release
+      - name: Upload to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: DoomRunner/Releases/*.flatpak
           overwrite: true
         env:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
