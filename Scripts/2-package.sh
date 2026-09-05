@@ -291,6 +291,8 @@ elif [ $PACKAGE_TYPE == flatpak ]; then
 	echo " repository:       $FLATPAK_REPO" | eval $SHORTEN_PATHS
 
 	[ ! -d "$BUILD_DIR" ] && mkdir -p "$BUILD_DIR"
+	# the repo must be exportable from a directory that already exists
+	[ ! -d "$(dirname "$FLATPAK_REPO")" ] && mkdir -p "$(dirname "$FLATPAK_REPO")"
 
 	# substitute variables inside the manifest
 	sed -e "s|\${SOURCE_DIR}|$SOURCE_DIR|" \
