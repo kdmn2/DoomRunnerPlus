@@ -69,9 +69,18 @@ set "BUILD_DIR_NAME=%OS_TYPE%-%TARGET_ENV%-%LINKAGE%-%BUILD_TYPE%"
 set "BUILD_DIR=%SOURCE_DIR%\Builds\%BUILD_DIR_NAME%"
 
 :: setup the msys2 build environment
-set "MSYS_ROOT=C:\msys64"
+set "MSYS_ENV=ucrt64"
 if %TARGET_ENV%==legacy set "MSYS_ENV=mingw32"
-if %TARGET_ENV%==recent set "MSYS_ENV=ucrt64"
+
+:: derive the MSYS2 installation root. In CI (msys2/setup-msys2) the tools are
+:: unpacked into a temp dir (e.g. D:\a\_temp\setup-msys2\msys2) rather than the
+:: conventional C:\msys64, so resolve it from the live environment and fall back
+:: to the conventional location for local builds.
+set "MSYS_ROOT="
+for /f "usebackq delims=" %%R in (`cygpath -w / 2^>nul`) do if exist "%%~R\usr\bin\bash.exe" set "MSYS_ROOT=%%~R"
+if "%MSYS_ROOT:~-1%"=="\" set "MSYS_ROOT=%MSYS_ROOT:~0,-1%"
+if not defined MSYS_ROOT set "MSYS_ROOT=C:\msys64"
+
 set "PATH=%MSYS_ROOT%\%MSYS_ENV%\bin;%MSYS_ROOT%\usr\local\bin;%MSYS_ROOT%\usr\bin;%MSYS_ROOT%\bin"
 
 :: select and verify the Qt build tools
