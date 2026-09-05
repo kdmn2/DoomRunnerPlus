@@ -299,10 +299,13 @@ elif [ $PACKAGE_TYPE == flatpak ]; then
 
 	# download sources, build everything, and export the build output to the Flatpak repository
 	echo
+	# use the per-user Flatpak installation so CI runners (which register the
+	# flathub remote as --user) can fetch the runtime/SDK without a system repo
 	COMMAND="$FLATPAK_BUILDER
       --force-clean
       --delete-build-dirs
       --install-deps-from=flathub
+      --user
       --state-dir=\"$FLATPAK_STATE_DIR\"
       --repo=\"$FLATPAK_REPO\"
       \"$FLATPAK_DEST_DIR\"
