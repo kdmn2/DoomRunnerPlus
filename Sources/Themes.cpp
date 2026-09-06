@@ -714,22 +714,27 @@ void applyUiScale( double scale )
 
 	QApplication::setFont( scaledFont );
 
-	// Some platforms (notably the Steam Deck / gamescope session) don't reliably
-	// re-polish and re-layout already-open windows after a global font change, while
-	// a freshly-shown window (like the Initial Setup dialog) does. Re-deliver the
-	// font-change event and force every open window and its children to recompute
-	// their geometry so they end up at the same size as a newly-opened window.
+	// Windows created after a font change pick up the new app font automatically, but
+	// widgets that already exist (e.g. the main window, shown before the user changed
+	// the size) don't always re-resolve on the Steam Deck / gamescope session. The app-wide
+	// font change is normally cascaded top-down, which can be unreliable here, so deliver
+	// ApplicationFontChange to every widget directly. Widgets that set their own explicit
+	// font (e.g. the About title or the engine output log) keep it; inheriting widgets
+	// re-resolve to the new scaled app font.
 	for (QWidget * window : QApplication::topLevelWidgets())
 	{
-		QEvent fontChange( QEvent::ApplicationFontChange );
-		QApplication::sendEvent( window, &fontChange );
-
 		if (auto * layout = window->layout())
 			layout->invalidate();
 
+		QWidgetList widgets = window->findChildren< QWidget * >();
+		widgets.prepend( window );
+		for (QWidget * widget : widgets)
+		{
+			QEvent fontChange( QEvent::ApplicationFontChange );
+			QApplication::sendEvent( widget, &fontChange );
+			widget->updateGeometry();
+		}
 		window->update();
-		for (QWidget * child : window->findChildren< QWidget * >())
-			child->updateGeometry();
 	}
 }
 
