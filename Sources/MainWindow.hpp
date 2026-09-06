@@ -449,6 +449,8 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 
 	QStringList compatOptsCmdArgs;  ///< string with command line args created from compatibility options, cached so that it doesn't need to be regenerated on every command line update
 
+	bool launchInProgress_ = false;  ///< guards against re-launching while the previous engine is still starting
+
 	UpdateChecker updateChecker;
 	GamepadInput gamepadInput;  ///< bridges a connected gamepad to the UI as key events
 

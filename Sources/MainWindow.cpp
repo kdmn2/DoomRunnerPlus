@@ -6349,6 +6349,12 @@ int MainWindow::askForExtraPermissions( const EngineInfo & selectedEngine, const
 
 void MainWindow::executeLaunchCommand()
 {
+	// Guard against launching the same engine twice (e.g. by rapidly double-clicking "Launch!"
+	// or clicking again while the first copy is still loading). The detached launch returns
+	// immediately, so without this a second click would spawn a second copy of the engine.
+	if (launchInProgress_)
+		return;
+
 	if (!selectedPreset)
 	{
 		reportUserError( "No preset selected", "Select a preset from the preset list." );
@@ -6411,16 +6417,33 @@ void MainWindow::executeLaunchCommand()
 	EnvVars envVars = globalOpts.envVars;
 	envVars += selectedPreset->envVars;
 
+	// From this point on the engine is (about to be) launched - block re-clicks so a rapid
+	// second "Launch!" press doesn't start another copy of the same engine.
+	launchInProgress_ = true;
+	ui->launchBtn->setEnabled( false );
+
 	if (settings.showEngineOutput)
 	{
 		ProcessOutputWindow processWindow( this, settings.closeOutputOnSuccess );
-		processWindow.runProcess( cmd.executable, cmd.arguments, processWorkingDir, envVars );
+		processWindow.runProcess( cmd.executable, cmd.arguments, processWorkingDir, envVars );  // modal - blocks until the engine exits
 		//int resultCode = processWindow.result();
 		settings.closeOutputOnSuccess = processWindow.closeOnSuccessChecked;
+
+		launchInProgress_ = false;
+		ui->launchBtn->setEnabled( true );
 	}
 	else
 	{
 		bool success = startDetachedProcess( cmd.executable, cmd.arguments, processWorkingDir, envVars );
+
+		// The launched engine is detached, so we can't tell when it exits. Re-enable the button
+		// after a short debounce (long enough to swallow an accidental double-click during startup,
+		// short enough to not block an intentional re-launch once the game is running).
+		QTimer::singleShot( 1500, this, [ this ]
+		{
+			launchInProgress_ = false;
+			ui->launchBtn->setEnabled( true );
+		} );
 
 		if (success && settings.closeOnLaunch)
 		{
