@@ -16,6 +16,7 @@
 
 #include <QApplication>
 #include <QWidget>
+#include <QLayout>
 #include <QFontInfo>
 #include <QWindow>
 #include <QWindow>
@@ -713,11 +714,19 @@ void applyUiScale( double scale )
 
 	QApplication::setFont( scaledFont );
 
-	// Some platforms (notably the Steam Deck / gamescope session) don't automatically
-	// repaint or re-layout open windows after a global font change, so nudge every
-	// top-level window and its children to recalculate their sizes and repaint.
+	// Some platforms (notably the Steam Deck / gamescope session) don't reliably
+	// re-polish and re-layout already-open windows after a global font change, while
+	// a freshly-shown window (like the Initial Setup dialog) does. Re-deliver the
+	// font-change event and force every open window and its children to recompute
+	// their geometry so they end up at the same size as a newly-opened window.
 	for (QWidget * window : QApplication::topLevelWidgets())
 	{
+		QEvent fontChange( QEvent::ApplicationFontChange );
+		QApplication::sendEvent( window, &fontChange );
+
+		if (auto * layout = window->layout())
+			layout->invalidate();
+
 		window->update();
 		for (QWidget * child : window->findChildren< QWidget * >())
 			child->updateGeometry();
