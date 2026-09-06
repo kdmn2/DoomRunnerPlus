@@ -16,6 +16,8 @@
 
 #include <QApplication>
 #include <QWidget>
+#include <QFontInfo>
+#include <QWindow>
 #include <QWindow>
 #include <QStyle>
 #include <QStyleFactory>
@@ -687,15 +689,39 @@ void setAppStyle( const QString & userStyleName )
 
 void applyUiScale( double scale )
 {
+	if (scale <= 0.0)
+		scale = 1.0;
+
 	QFont scaledFont = c_defaultUiFont;
-	// Support fonts that are specified in either points or pixels - on some setups
-	// (e.g. the Steam Deck) the default font is pixel based, in which case
-	// pointSizeF() is -1 and scaling it would silently do nothing.
-	if (c_defaultUiFont.pointSizeF() > 0)
-		scaledFont.setPointSizeF( c_defaultUiFont.pointSizeF() * scale );
-	else if (c_defaultUiFont.pixelSize() > 0)
-		scaledFont.setPixelSize( int( c_defaultUiFont.pixelSize() * scale ) );
+
+	// Determine the base font size. A font can be specified in points at pixels;
+	// on some setups (e.g. the Steam Deck / gamescope session) neither pointSizeF()
+	// nor pixelSize() is explicitly set (-1), in which case we resolve the actual
+	// size against the screen so the scaling still has an effect.
+	double pointSize = c_defaultUiFont.pointSizeF();
+	int pixelSize = c_defaultUiFont.pixelSize();
+
+	if (pointSize > 0)
+		scaledFont.setPointSizeF( pointSize * scale );
+	else
+	{
+		if (pixelSize <= 0)
+			pixelSize = QFontInfo( c_defaultUiFont ).pixelSize();
+		if (pixelSize > 0)
+			scaledFont.setPixelSize( int( pixelSize * scale ) );
+	}
+
 	QApplication::setFont( scaledFont );
+
+	// Some platforms (notably the Steam Deck / gamescope session) don't automatically
+	// repaint or re-layout open windows after a global font change, so nudge every
+	// top-level window and its children to recalculate their sizes and repaint.
+	for (QWidget * window : QApplication::topLevelWidgets())
+	{
+		window->update();
+		for (QWidget * child : window->findChildren< QWidget * >())
+			child->updateGeometry();
+	}
 }
 
 void updateWindowBorder( [[maybe_unused]] QWidget * window )
