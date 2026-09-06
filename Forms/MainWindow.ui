@@ -305,11 +305,6 @@
               <layout class="QVBoxLayout" name="verticalLayout_7">
                <item>
                 <widget class="RightClickableLabel" name="mapDirHelpLabel">
-                 <property name="font">
-                  <font>
-                   <pointsize>7</pointsize>
-                  </font>
-                 </property>
                  <property name="text">
                   <string>hold CTRL to deselect or select multiple</string>
                  </property>
