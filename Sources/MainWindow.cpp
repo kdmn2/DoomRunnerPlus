@@ -2833,6 +2833,10 @@ void MainWindow::runSetupDialog()
 		settings = std::move( dialog.settings );
 		appearance = std::move( dialog.appearance );
 		themes::applyUiScale( appearance.uiScale );  // make sure the whole main window is rescaled
+		// The Initial Setup dialog is modal and can cover the main window (e.g. fullscreen
+		// on the Steam Deck), so its font change reaches the blocked main window late.
+		// Re-apply after the dialog is fully closed, while the main window is visible.
+		QTimer::singleShot( 0, this, [ this ] { themes::applyUiScale( appearance.uiScale ); } );
 
 		// update all stored paths
 		togglePathStyle( settings.pathStyle );
