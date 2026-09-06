@@ -115,7 +115,7 @@ static const EngineFamilyTraits engineFamilyTraits [] =
 	{
 		.configFileSuffix = "cfg",
 		.saveFileSuffix = "dsg",
-		.loadFileParam = "-merge",
+		.loadFileParam = "-file",  // -file loads PWADs; -merge is a separate "merge into IWAD" mode for TCs
 		.saveDirParam = "-savedir",
 		.multHostParam = nullptr,
 		.multPlayerCountParam = nullptr,
@@ -306,6 +306,11 @@ EngineFamily EngineTraits::guessEngineFamily() const
 	if (normalizedName().startsWith("edge"))  // example: "edge135"
 	{
 		return EngineFamily::EDGE;
+	}
+	// Woof builds are sometimes named with a version suffix (e.g. "woof-2.4.1"); any "woof" binary is the MBF-family Woof port.
+	if (normalizedName().startsWith("woof"))
+	{
+		return EngineFamily::MBF;
 	}
 
 	// fallback if everything fails

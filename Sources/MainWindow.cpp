@@ -5926,10 +5926,9 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 		{
 			QString suffix = QFileInfo( filePath ).suffix().toLower();
 			// dehacked files are special, they go directly into the arguments with a different command line option
-			if (suffix == "deh" || suffix == "hhe") {
+			if (suffix == "deh" || suffix == "hhe" || suffix == "bex") {
+				// BEX is a Dehacked format extension and is loaded with -deh (there is no -bex flag).
 				fileArgs << "-deh" << runDirRebaser.makeRequiredCmdPath( filePath );
-			} else if (suffix == "bex") {
-				fileArgs << "-bex" << runDirRebaser.makeRequiredCmdPath( filePath );
 			} else {
 				// for now, only insert a placeholder where all the files will be inserted later together
 				if (!placeholderPlaced) {
