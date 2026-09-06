@@ -208,6 +208,9 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 
 	void onLaunchBtnClicked();
 
+	void nextMainTab();
+	void prevMainTab();
+
  private: // methods
 
 	void adjustUi();

@@ -110,7 +110,7 @@ AppInfo getAppInfo( const QString & executablePath );
   * \param dirsToBeAccessed Directories to which the executable will need a read access.
   *                         Required to setup permissions for a sandbox environment. */
 ShellCommand getRunCommand(
-	const QString & executablePath, const PathRebaser & runnersDirRebaser, bool forceExeName,
+	const QString & executablePath, const PathRebaser & runnersDirRebaser,
 	const QStringList & dirsToBeAccessed = {}
 );
 

@@ -771,19 +771,10 @@ QStringList findDoomEngines()
 
 // On Unix, to run an executable file inside current working directory, the relative path needs to be prepended by "./"
 // On Windows this must be prefixed too! Otherwise Windows will prefer executable in the same directory as DoomRunner
-// over executable in the current working directory
-// https://superuser.com/questions/897644/how-does-windows-decide-which-executable-to-run/1683394#1683394
-inline static QString fixExePath( QString exePath )
-{
-	if (!exePath.contains("/"))  // the file is in the current working directory
-	{
-		return "./" + exePath;
-	}
-	return exePath;
-}
+//======================================================================================================================
 
 ShellCommand getRunCommand(
-	const QString & executablePath, const PathRebaser & runnersDirRebaser, bool forceExeName,
+	const QString & executablePath, const PathRebaser & runnersDirRebaser,
 	const QStringList & dirsToBeAccessed
 ){
 	QStringList cmdParts, extraPermissions;
@@ -830,16 +821,23 @@ ShellCommand getRunCommand(
 		}
 		cmdParts << sandboxEnv.appName;
 	}
-	else if (forceExeName || isInSearchPath( executablePath ))
-	{
-		// If it's in a search path (C:\Windows\System32, /usr/bin, ...)
-		// it should be (and sometimes must be) started directly by using only its name.
-		cmdParts << fs::getFileNameFromPath( executablePath );
-	}
 	else
 	{
-		QString rebasedExePath = runnersDirRebaser.rebaseAndConvert( executablePath );  // respect configured path style
-		cmdParts << runnersDirRebaser.makeCmdPath( fixExePath( rebasedExePath ) );
+		// Always address the engine by its full absolute path, so launching it does not
+		// depend on the current working directory or $PATH to resolve a bare/relative name.
+		QString exeAbsPath;
+		const QString exeName = fs::getFileNameFromPath( executablePath );
+		if (exeName == executablePath)  // stored as a bare name -> resolve it through the OS search path
+		{
+			exeAbsPath = QStandardPaths::findExecutable( exeName );
+			if (exeAbsPath.isEmpty())
+				exeAbsPath = exeName;  // fall back, let the OS try to find it
+		}
+		else
+		{
+			exeAbsPath = runnersDirRebaser.rebaseAndConvert( executablePath );  // respect configured path style (absolute for launch)
+		}
+		cmdParts << runnersDirRebaser.makeCmdPath( exeAbsPath );
 	}
 
 	ShellCommand cmd;

@@ -7,10 +7,14 @@
 #include "GamepadInput.hpp"
 
 #include "Utils/ErrorHandling.hpp"  // logInfo
+#include "Utils/OSUtils.hpp"        // getThisLauncherDataDir
 
 #include <QApplication>
 #include <QWidget>
 #include <QKeyEvent>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #ifdef ENABLE_GAMEPAD
 	#include <SDL.h>
@@ -25,11 +29,11 @@ struct GamepadInput::State
 	SDL_JoystickID controllerId = -1;    // instance id of the opened controller
 #endif
 	bool btnUp = false, btnDown = false, btnLeft = false, btnRight = false;
-	bool btnA = false, btnB = false, btnBack = false;
+	bool btnA = false, btnB = false, btnBack = false, btnLb = false, btnRb = false;
 	int axisX = 0, axisY = 0;            // latest left-stick values
 
-	bool dirActive[4] = {};              // one entry per Dir (Up/Down/Left/Right)
-	int repeatKey = 0;                   // arrow key currently being auto-repeated, 0 = none
+	bool dirActive[ 4 ] = {};            // one entry per Ctrl_Up/Down/Left/Right
+	int repeatCtrl = -1;                 // control currently being auto-repeated, -1 = none
 };
 
 
@@ -52,6 +56,7 @@ GamepadInput::GamepadInput( QObject * parent )
  : QObject( parent )
 {
 	state_ = new State();
+	applyDefaultBindings();
 
 	pollTimer_.setInterval( 15 );
 	connect( &pollTimer_, &QTimer::timeout, this, &GamepadInput::poll );
@@ -65,15 +70,86 @@ GamepadInput::~GamepadInput()
 #ifdef ENABLE_GAMEPAD
 	if (state_->controller)
 		SDL_GameControllerClose( static_cast< SDL_GameController * >( state_->controller ) );
-	if (state_)
-		SDL_QuitSubSystem( SDL_INIT_GAMECONTROLLER );
+	SDL_QuitSubSystem( SDL_INIT_GAMECONTROLLER );
 #endif
 	delete state_;
+}
+
+void GamepadInput::applyDefaultBindings()
+{
+	bindings[ Ctrl_Up ]        = { .isTabAction = false, .key = Qt::Key_Up,        .tabDelta = 0 };
+	bindings[ Ctrl_Down ]      = { .isTabAction = false, .key = Qt::Key_Down,      .tabDelta = 0 };
+	bindings[ Ctrl_Left ]      = { .isTabAction = false, .key = Qt::Key_Left,      .tabDelta = 0 };
+	bindings[ Ctrl_Right ]     = { .isTabAction = false, .key = Qt::Key_Right,     .tabDelta = 0 };
+	bindings[ Ctrl_Activate ]  = { .isTabAction = false, .key = Qt::Key_Return,    .tabDelta = 0 };
+	bindings[ Ctrl_Back ]      = { .isTabAction = false, .key = Qt::Key_Escape,    .tabDelta = 0 };
+	bindings[ Ctrl_FocusNext ] = { .isTabAction = false, .key = Qt::Key_Tab,       .tabDelta = 0 };
+	bindings[ Ctrl_NextTab ]   = { .isTabAction = true,  .key = 0,                 .tabDelta = +1 };
+	bindings[ Ctrl_PrevTab ]   = { .isTabAction = true,  .key = 0,                 .tabDelta = -1 };
+}
+
+GamepadInput::Binding GamepadInput::parseBinding( const QString & name ) const
+{
+	const QString n = name.trimmed();
+
+	if (n.compare("NextTab", Qt::CaseInsensitive) == 0)
+		return { .isTabAction = true, .key = 0, .tabDelta = +1 };
+	if (n.compare("PrevTab", Qt::CaseInsensitive) == 0)
+		return { .isTabAction = true, .key = 0, .tabDelta = -1 };
+
+	static const QHash< QString, int > keyNames = {
+		{ "up", Qt::Key_Up }, { "down", Qt::Key_Down }, { "left", Qt::Key_Left }, { "right", Qt::Key_Right },
+		{ "return", Qt::Key_Return }, { "enter", Qt::Key_Return }, { "escape", Qt::Key_Escape }, { "esc", Qt::Key_Escape },
+		{ "tab", Qt::Key_Tab }, { "space", Qt::Key_Space }, { "pageup", Qt::Key_PageUp }, { "pagedown", Qt::Key_PageDown },
+		{ "home", Qt::Key_Home }, { "end", Qt::Key_End },
+	};
+
+	auto it = keyNames.constFind( n.toLower() );
+	if (it == keyNames.cend())
+		return {};
+	return { .isTabAction = false, .key = it.value(), .tabDelta = 0 };
+}
+
+void GamepadInput::loadConfig()
+{
+	applyDefaultBindings();  // start from defaults, override what the config specifies
+
+	QFile file( os::getThisLauncherDataDir() + "/controller.json" );
+	if (!file.open( QIODevice::ReadOnly ))
+		return;
+
+	QJsonParseError err;
+	const QJsonDocument doc = QJsonDocument::fromJson( file.readAll(), &err );
+	if (err.error != QJsonParseError::NoError || !doc.isObject())
+	{
+		logInfo() << "Gamepad config won't be used - controller.json is invalid:" << err.errorString();
+		return;
+	}
+	const QJsonObject root = doc.object();
+
+	struct NamedBinding { const char * key; int ctrl; };
+	static const NamedBinding configMap[] = {
+		{ "up", Ctrl_Up }, { "down", Ctrl_Down }, { "left", Ctrl_Left }, { "right", Ctrl_Right },
+		{ "activate", Ctrl_Activate }, { "back", Ctrl_Back }, { "focus_next", Ctrl_FocusNext },
+		{ "next_tab", Ctrl_NextTab }, { "prev_tab", Ctrl_PrevTab },
+	};
+
+	for (const NamedBinding & nb : configMap)
+	{
+		if (const QJsonValue v = root.value( nb.key ); v.isString())
+		{
+			Binding b = parseBinding( v.toString() );
+			if (b.isTabAction || b.key != 0)
+				bindings[ nb.ctrl ] = b;
+		}
+	}
 }
 
 void GamepadInput::start()
 {
 #ifdef ENABLE_GAMEPAD
+	loadConfig();
+
 	if (SDL_InitSubSystem( SDL_INIT_GAMECONTROLLER ) != 0)
 	{
 		logInfo() << "Gamepad input disabled - failed to initialize SDL:" << SDL_GetError();
@@ -114,8 +190,7 @@ void GamepadInput::poll()
 					SDL_GameControllerClose( static_cast< SDL_GameController * >( state_->controller ) );
 					state_->controller = nullptr;
 					state_->controllerId = -1;
-					state_->btnUp = state_->btnDown = state_->btnLeft = state_->btnRight = false;
-					state_->btnA = state_->btnB = state_->btnBack = false;
+					resetPressedState();
 				}
 				break;
 
@@ -128,9 +203,11 @@ void GamepadInput::poll()
 						case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  state_->btnDown  = true;  break;
 						case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  state_->btnLeft  = true;  break;
 						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: state_->btnRight = true;  break;
-						case SDL_CONTROLLER_BUTTON_A:          if (!state_->btnA) sendKeyClick( Qt::Key_Return ); state_->btnA = true;  break;
-						case SDL_CONTROLLER_BUTTON_B:          if (!state_->btnB) sendKeyClick( Qt::Key_Escape ); state_->btnB = true;  break;
-						case SDL_CONTROLLER_BUTTON_BACK:       if (!state_->btnBack) sendKeyClick( Qt::Key_Tab ); state_->btnBack = true;  break;
+						case SDL_CONTROLLER_BUTTON_A:          if (!state_->btnA)    invokeControl( Ctrl_Activate );  state_->btnA = true;    break;
+						case SDL_CONTROLLER_BUTTON_B:          if (!state_->btnB)    invokeControl( Ctrl_Back );      state_->btnB = true;    break;
+						case SDL_CONTROLLER_BUTTON_BACK:       if (!state_->btnBack) invokeControl( Ctrl_FocusNext ); state_->btnBack = true; break;
+						case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: if (!state_->btnRb) invokeControl( Ctrl_NextTab );  state_->btnRb = true;    break;
+						case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  if (!state_->btnLb) invokeControl( Ctrl_PrevTab );  state_->btnLb = true;    break;
 						default: break;
 					}
 				}
@@ -148,6 +225,8 @@ void GamepadInput::poll()
 						case SDL_CONTROLLER_BUTTON_A:          state_->btnA     = false; break;
 						case SDL_CONTROLLER_BUTTON_B:          state_->btnB     = false; break;
 						case SDL_CONTROLLER_BUTTON_BACK:       state_->btnBack  = false; break;
+						case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: state_->btnRb = false; break;
+						case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  state_->btnLb = false; break;
 						default: break;
 					}
 				}
@@ -168,48 +247,67 @@ void GamepadInput::poll()
 		}
 	}
 
-	const bool up    = state_->btnUp    || state_->axisY <  -AXIS_DEADZONE;
-	const bool down  = state_->btnDown  || state_->axisY >   AXIS_DEADZONE;
-	const bool left  = state_->btnLeft  || state_->axisX <  -AXIS_DEADZONE;
-	const bool right = state_->btnRight || state_->axisX >   AXIS_DEADZONE;
-
-	updateDir( Dir::Up,    up );
-	updateDir( Dir::Down,  down );
-	updateDir( Dir::Left,  left );
-	updateDir( Dir::Right, right );
+	updateDir( Ctrl_Up,    state_->btnUp    || state_->axisY < -AXIS_DEADZONE );
+	updateDir( Ctrl_Down,  state_->btnDown  || state_->axisY >  AXIS_DEADZONE );
+	updateDir( Ctrl_Left,  state_->btnLeft  || state_->axisX < -AXIS_DEADZONE );
+	updateDir( Ctrl_Right, state_->btnRight || state_->axisX >  AXIS_DEADZONE );
 #endif
+}
+
+void GamepadInput::invokeControl( int ctrlIdx )
+{
+	const Binding & b = bindings[ ctrlIdx ];
+	if (b.isTabAction)
+	{
+		if (b.tabDelta > 0)
+			emit nextTab();
+		else if (b.tabDelta < 0)
+			emit prevTab();
+	}
+	else if (b.key != 0)
+	{
+		sendKeyClick( b.key );
+	}
+}
+
+void GamepadInput::updateDir( int ctrlIdx, bool active )
+{
+#ifdef ENABLE_GAMEPAD
+	if (active == state_->dirActive[ ctrlIdx ])
+		return;  // no change
+
+	state_->dirActive[ ctrlIdx ] = active;
+	const int key = bindings[ ctrlIdx ].key;
+
+	if (active)
+	{
+		sendKeyPress( key );
+		state_->repeatCtrl = ctrlIdx;
+		repeatTimer_.start();
+	}
+	else if (ctrlIdx == state_->repeatCtrl)
+	{
+		sendKeyRelease( key );
+		state_->repeatCtrl = -1;
+		repeatTimer_.stop();
+	}
+#endif
+}
+
+void GamepadInput::resetPressedState()
+{
+	state_->btnUp = state_->btnDown = state_->btnLeft = state_->btnRight = false;
+	state_->btnA = state_->btnB = state_->btnBack = state_->btnLb = state_->btnRb = false;
+	state_->axisX = state_->axisY = 0;
+	state_->repeatCtrl = -1;
+	repeatTimer_.stop();
 }
 
 void GamepadInput::repeatCurrent()
 {
 #ifdef ENABLE_GAMEPAD
-	if (state_->repeatKey != 0)
-		sendKeyPress( state_->repeatKey );
-#endif
-}
-
-void GamepadInput::updateDir( Dir dir, bool active )
-{
-#ifdef ENABLE_GAMEPAD
-	const int idx = static_cast< int >( dir );
-	if (active == state_->dirActive[ idx ])
-		return;  // no change
-
-	state_->dirActive[ idx ] = active;
-	const int key = dirKey( dir );
-
-	if (active)
-	{
-		sendKeyPress( key );
-		state_->repeatKey = key;
-		repeatTimer_.start();
-	}
-	else if (key == state_->repeatKey)
-	{
-		sendKeyRelease( key );
-		state_->repeatKey = 0;
-		repeatTimer_.stop();
-	}
+	if (state_->repeatCtrl >= 0)
+		sendKeyPress( bindings[ state_->repeatCtrl ].key );
 #endif
 }
 
@@ -235,15 +333,4 @@ void GamepadInput::sendKeyClick( int key )
 {
 	sendKeyPress( key );
 	sendKeyRelease( key );
-}
-
-int GamepadInput::dirKey( Dir dir )
-{
-	switch (dir)
-	{
-		case Dir::Up:    return Qt::Key_Up;
-		case Dir::Down:  return Qt::Key_Down;
-		case Dir::Left:  return Qt::Key_Left;
-		default:         return Qt::Key_Right;
-	}
 }

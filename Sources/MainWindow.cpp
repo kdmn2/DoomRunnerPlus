@@ -1257,6 +1257,10 @@ MainWindow::MainWindow()
 	connect( ui->gamescopeArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGamescopeArgsChanged );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
 
+	// gamepad shoulder buttons cycle the main tab bar
+	connect( &gamepadInput, &GamepadInput::nextTab, this, &ThisClass::nextMainTab );
+	connect( &gamepadInput, &GamepadInput::prevTab, this, &ThisClass::prevMainTab );
+
 	gamepadInput.start();
 }
 
@@ -5324,6 +5328,20 @@ void MainWindow::onLaunchBtnClicked()
 	executeLaunchCommand();
 }
 
+void MainWindow::nextMainTab()
+{
+	const int count = ui->tabWidget->count();
+	if (count > 0)
+		ui->tabWidget->setCurrentIndex( ( ui->tabWidget->currentIndex() + 1 ) % count );
+}
+
+void MainWindow::prevMainTab()
+{
+	const int count = ui->tabWidget->count();
+	if (count > 0)
+		ui->tabWidget->setCurrentIndex( ( ui->tabWidget->currentIndex() - 1 + count ) % count );
+}
+
 
 //----------------------------------------------------------------------------------------------------------------------
 // miscellaneous
@@ -5863,7 +5881,7 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 	p.checkItemFilePath( engine, "the selected engine", "Please update its path in Menu -> Initial Setup, or select another one." );
 
 	// get the beginning of the launch command based on OS and installation type
-	cmd = os::getRunCommand( engine.executablePath, runnersDirRebaser, !cmdPrefixStr.isEmpty(), getDirsToBeAccessed() );
+	cmd = os::getRunCommand( engine.executablePath, runnersDirRebaser, getDirsToBeAccessed() );
 
 	//-- command prefix ------------------------------------------------------------
 
