@@ -781,6 +781,30 @@ QStringList EngineTraits::getCompatModeArgs( int compatMode ) const
 	}
 }
 
+bool EngineTraits::supportsGamepad() const
+{
+	assert( hasFamily() );
+	return _family == EngineFamily::ZDoom || _family == EngineFamily::PrBoom;
+}
+
+QStringList EngineTraits::getGamepadArgs( bool useGamepad ) const
+{
+	assert( hasFamily() );
+
+	switch (_family)
+	{
+		case EngineFamily::ZDoom:
+			// ZDoom-family CVars are set with "+cvar value" on the command line.
+			return useGamepad ? QStringList{ "+joy_enable", "1" } : QStringList{};
+		case EngineFamily::PrBoom:
+			// dsda-doom has no joystick switch; enable via a config assignment, and
+			// explicitly disable it when the user turns gamepad off.
+			return useGamepad ? QStringList{ "-assign", "use_game_controller=1" } : QStringList{ "-nojoy" };
+		default:
+			return {};
+	}
+}
+
 QString EngineTraits::getCmdMonitorIndex( int ownIndex ) const
 {
 	assert( isInitialized() );

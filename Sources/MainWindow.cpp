@@ -4417,7 +4417,7 @@ void MainWindow::toggleOptionsSubwidgets( LaunchMode mode )
 	ui->noAutoLoadChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 	ui->noAutoExecChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 	ui->allowDuplicatesChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
-	ui->useGamepadChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
+	ui->useGamepadChkBox->setEnabled( selectedEngine != nullptr && selectedEngine->supportsGamepad() );
 
 	ui->pistolStartChkBox->setEnabled( shouldEnablePistolStart( mode, selectedEngine ) );
 	ui->allowCheatsChkBox->setEnabled( shouldEnableAllowCheats( mode, selectedEngine ) );
@@ -6085,8 +6085,8 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 		cmd.arguments << "-noautoexec";
 	if (ui->allowDuplicatesChkBox->isEnabled() && ui->allowDuplicatesChkBox->isChecked())
 		cmd.arguments << "-allowduplicates";
-	if (ui->useGamepadChkBox->isEnabled() && ui->useGamepadChkBox->isChecked())
-		cmd.arguments << "+joy_enable" << "1";
+	if (ui->useGamepadChkBox->isEnabled())
+		cmd.arguments << engine.getGamepadArgs( ui->useGamepadChkBox->isChecked() );
 
 	const CompatibilityOptions & activeCompatOpts = activeCompatOptions();
 	if (ui->compatModeCmbBox->isEnabled() && activeCompatOpts.compatMode >= 0)

@@ -206,6 +206,13 @@ class EngineTraits {
 	/// Generates either "-complevel x" or "+compatmode x" depending on the engine capabilities.
 	QStringList getCompatModeArgs( int compatMode ) const;
 
+	/// Returns whether the engine supports controller input through the command line.
+	/** ZDoom-family (GZDoom, UZDoom, ...) and PrBoom-family (dsda-doom) engines do. */
+	bool supportsGamepad() const;
+
+	/// Generates the command line arguments that enable or disable gamepad/controller input.
+	QStringList getGamepadArgs( bool useGamepad ) const;
+
 	/// Returns the correct monitor index the engine expects.
 	/** Some engines index monitors from 1 and others from 0. */
 	QString getCmdMonitorIndex( int ownIndex ) const;
