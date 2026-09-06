@@ -27,6 +27,7 @@ struct OptionsToLoad;
 #include <QString>
 #include <QFileInfo>
 #include <QFileSystemModel>
+#include <QTimer>
 class QTableWidget;
 class QItemSelection;
 class QComboBox;
@@ -207,6 +208,11 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onGamescopeArgsChanged( const QString & text );
 
 	void onLaunchBtnClicked();
+
+	void onCrashWatchTick();
+
+	void startQuickCrashWatch( const QString & logPath );
+	void showQuickCrashOutput( const QString & output );
 
 	void nextMainTab();
 	void prevMainTab();
@@ -450,6 +456,12 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	QStringList compatOptsCmdArgs;  ///< string with command line args created from compatibility options, cached so that it doesn't need to be regenerated on every command line update
 
 	bool launchInProgress_ = false;  ///< guards against re-launching while the previous engine is still starting
+
+	// Quick-crash diagnostics: if the engine exits shortly after launch, show its captured output.
+	QTimer crashWatchTimer_;
+	QString crashWatchLogPath_;
+	int crashWatchChecksLeft_ = 0;
+	qint64 crashWatchCounter_ = 0;
 
 	UpdateChecker updateChecker;
 	GamepadInput gamepadInput;  ///< bridges a connected gamepad to the UI as key events

@@ -1257,6 +1257,8 @@ MainWindow::MainWindow()
 	connect( ui->gamescopeArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGamescopeArgsChanged );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
 
+	connect( &crashWatchTimer_, &QTimer::timeout, this, &ThisClass::onCrashWatchTick );
+
 	// gamepad shoulder buttons cycle the main tab bar
 	connect( &gamepadInput, &GamepadInput::nextTab, this, &ThisClass::nextMainTab );
 	connect( &gamepadInput, &GamepadInput::prevTab, this, &ThisClass::prevMainTab );
@@ -6347,6 +6349,64 @@ int MainWindow::askForExtraPermissions( const EngineInfo & selectedEngine, const
 	return answer;
 }
 
+// POSIX single-quotes an argument so it can be embedded in a shell command safely.
+static QString shellQuote( const QString & arg )
+{
+	QString q = arg;
+	q.replace( "'", "'\\''" );
+	return "'" + q + "'";
+}
+
+void MainWindow::startQuickCrashWatch( const QString & logPath )
+{
+	// Watch the engine's log for a quick failure (~5s). If the marker appears, the engine
+	// exited shortly after launch and we show its output; if not, it's running fine.
+	++crashWatchCounter_;
+	crashWatchLogPath_ = logPath;
+	crashWatchChecksLeft_ = 25;  // 25 * 200ms = 5 seconds
+	crashWatchTimer_.start( 200 );
+}
+
+void MainWindow::onCrashWatchTick()
+{
+	const char * const marker = "__DOOMRUNNER_QUICK_EXIT__";
+
+	QFile file( crashWatchLogPath_ );
+	if (file.open( QIODevice::ReadOnly | QIODevice::Text ))
+	{
+		const QString content = QString::fromUtf8( file.readAll() );
+		if (content.contains( QString::fromLatin1( marker ) ))
+		{
+			crashWatchTimer_.stop();
+			QString output = content;
+			output.remove( QString::fromLatin1( marker ) );
+			output.remove( QRegularExpression( "\\s+$" ) );  // trim trailing whitespace left by the marker
+			if (!output.trimmed().isEmpty())
+				showQuickCrashOutput( output );
+			QFile::remove( crashWatchLogPath_ );
+			crashWatchLogPath_.clear();
+			return;
+		}
+	}
+
+	if (--crashWatchChecksLeft_ <= 0)
+	{
+		crashWatchTimer_.stop();
+		QFile::remove( crashWatchLogPath_ );  // engine is still running - ignore and clean up the log
+		crashWatchLogPath_.clear();
+	}
+}
+
+void MainWindow::showQuickCrashOutput( const QString & output )
+{
+	QMessageBox box( this );
+	box.setIcon( QMessageBox::Warning );
+	box.setWindowTitle( "Engine exited shortly after launch" );
+	box.setText( "The engine failed to start (it exited within a few seconds). Its output was:" );
+	box.setDetailedText( output );
+	box.exec();
+}
+
 void MainWindow::executeLaunchCommand()
 {
 	// Guard against launching the same engine twice (e.g. by rapidly double-clicking "Launch!"
@@ -6434,7 +6494,26 @@ void MainWindow::executeLaunchCommand()
 	}
 	else
 	{
-		bool success = startDetachedProcess( cmd.executable, cmd.arguments, processWorkingDir, envVars );
+ #if IS_WINDOWS
+		// No portable shell to redirect output on Windows - launch directly and skip the quick-crash capture.
+		const bool success = startDetachedProcess( cmd.executable, cmd.arguments, processWorkingDir, envVars );
+ #else
+		// Launch the engine through a shell that redirects its output to a temp log (it stays detached,
+		// so the engine keeps running after the launcher closes). If the engine exits within the first
+		// ~5 seconds, we show the captured output so the user can see why it failed (e.g. a bad WAD).
+		const QString logPath = QDir::temp().filePath(
+			QStringLiteral( "DoomRunner-%1-%2.log" ).arg( QCoreApplication::applicationPid() ).arg( crashWatchCounter_ + 1 ) );
+
+		QStringList quotedArgs;
+		quotedArgs << shellQuote( cmd.executable );
+		for (const QString & arg : cmd.arguments)
+			quotedArgs << shellQuote( arg );
+		const QString shellCommand = quotedArgs.join(' ')
+			+ " > " + shellQuote( logPath ) + " 2>&1; echo __DOOMRUNNER_QUICK_EXIT__ >> " + shellQuote( logPath );
+
+		const bool success = startDetachedProcess( "/bin/sh", QStringList{ "-c", shellCommand }, processWorkingDir, envVars );
+		startQuickCrashWatch( logPath );
+ #endif
 
 		// The launched engine is detached, so we can't tell when it exits. Re-enable the button
 		// after a short debounce (long enough to swallow an accidental double-click during startup,
