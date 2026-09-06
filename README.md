@@ -10,6 +10,8 @@ This project was produced **entirely with the help of AI** (an AI coding agent).
 
 Because of this, there is no guarantee of code quality, correctness, or that everything is bug-free. **Use it at your own risk.** The original Doom Runner, on which this is based, is a solid and well-made project — all the credit for that goes to its author.
 
+**Testing:** Only the **Steam Deck AppImage** build has actually been tested. The other packages (Linux zip, Flatpak, Windows, macOS) are built automatically by the CI but have not been tested — they may have issues.
+
 ## What's new vs. original Doom Runner
 
 * **WAD Downloader** — browse and download WADs from the [/idgames archive](https://www.doomworld.com/idgames/), the [Cacowards](https://www.doomworld.com/cacowards/) and [Top WADs](https://www.doomworld.com/topwads/) lists, with built-in search, a shared activity log and sortable result columns.
