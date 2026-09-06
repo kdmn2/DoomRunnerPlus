@@ -606,6 +606,29 @@
           </item>
          </layout>
         </item>
+        <item>
+         <layout class="QHBoxLayout" name="hLayout_gamescopeArgs">
+          <item>
+           <widget class="QLabel" name="gamescopeArgsLabel">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra arguments passed to gamescope when this preset runs in a gamescope instance &lt;span style=&quot; font-style:italic;&quot;&gt;(e.g. --scaling fsr --filter linear)&lt;/span&gt;. Ignored when the launcher is already running inside gamescope (Steam game mode).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Gamescope args [preset]</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="gamescopeArgsLine"/>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="optionsTab">

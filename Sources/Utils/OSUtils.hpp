@@ -140,6 +140,10 @@ const QString & getLinuxDesktopEnv();
 /** Recognized both in Steam Deck game mode and in desktop mode. */
 bool isSteamDeck();
 
+/// Returns whether this application is already running inside a gamescope session (SteamOS game mode).
+/** When true, nesting another gamescope instance would break its Vulkan swapchain layer. */
+bool isInsideGamescope();
+
 QList< MonitorInfo > listMonitors();
 
 

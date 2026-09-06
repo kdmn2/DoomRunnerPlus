@@ -498,6 +498,7 @@ struct Preset : public AModelItem
 	PtrList< Mod > mods;   // this list needs to be kept in sync with mod list widget
 	bool loadMapsAfterMods = false;
 	bool useGamescope = false;   ///< run the engine inside a gamescope fullscreen instance (useful on Steam Deck / handhelds)
+	QString gamescopeArgs;       ///< extra arguments passed to gamescope (e.g. --scaling fsr)
 
 	LaunchOptions launchOpts;
 	MultiplayerOptions multOpts;

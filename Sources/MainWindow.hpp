@@ -203,6 +203,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onGlobalCmdArgsChanged( const QString & text );
 	void onCmdPrefixChanged( const QString & text );
 	void onGamescopeToggled( bool checked );
+	void onGamescopeArgsChanged( const QString & text );
 
 	void onLaunchBtnClicked();
 

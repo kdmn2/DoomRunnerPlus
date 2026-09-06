@@ -48,6 +48,7 @@ QJsonObject serialize( const Preset & preset, const StorageSettings & settings )
 
 	presetJs["load_maps_after_mods"] = preset.loadMapsAfterMods;
 	presetJs["use_gamescope"] = preset.useGamescope;
+	presetJs["gamescope_args"] = preset.gamescopeArgs;
 
 	// options
 
@@ -123,6 +124,7 @@ void deserialize( Preset & preset, const JsonObjectCtx & presetJs, const Storage
 
 	preset.loadMapsAfterMods = presetJs.getBool( "load_maps_after_mods", preset.loadMapsAfterMods );
 	preset.useGamescope = presetJs.getBool( "use_gamescope", preset.useGamescope, AllowMissing );
+	preset.gamescopeArgs = presetJs.getString( "gamescope_args" );
 
 	// options
 

@@ -1248,6 +1248,7 @@ MainWindow::MainWindow()
 	connect( ui->globalCmdArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGlobalCmdArgsChanged );
 	connect( ui->cmdPrefixLine, &QLineEdit::textChanged, this, &ThisClass::onCmdPrefixChanged );
 	connect( ui->gamescopeChkBox, &QCheckBox::toggled, this, &ThisClass::onGamescopeToggled );
+	connect( ui->gamescopeArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGamescopeArgsChanged );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
 }
 
@@ -2215,6 +2216,7 @@ void MainWindow::restorePreset( Preset & preset )
 	// restore per-preset launcher tweaks
 	// On a Steam Deck the engine is always launched via gamescope, so the toggle is forced on (and disabled).
 	ui->gamescopeChkBox->setChecked( os::isSteamDeck() || preset.useGamescope );
+	ui->gamescopeArgsLine->setText( preset.gamescopeArgs );
 
 	restoreEnvVars( preset.envVars, ui->presetEnvVarTable );
 
@@ -3173,6 +3175,7 @@ void MainWindow::togglePresetSubWidgets( const Preset * selectedPreset )
 	ui->presetCmdArgsLine->setEnabled( selectedPreset != nullptr );
 	// gamescope is always used on a Steam Deck, so there's nothing to toggle there
 	ui->gamescopeChkBox->setEnabled( selectedPreset != nullptr && !os::isSteamDeck() );
+	ui->gamescopeArgsLine->setEnabled( selectedPreset != nullptr );
 
 	// Launch Options tab
 
@@ -3211,6 +3214,7 @@ void MainWindow::clearPresetSubWidgets()
 
 	ui->presetCmdArgsLine->clear();
 	ui->gamescopeChkBox->setChecked( false );
+	ui->gamescopeArgsLine->clear();
 
 	// Launch Options tab
 
@@ -5293,6 +5297,14 @@ void MainWindow::onGamescopeToggled( bool checked )
 	updateLaunchCommand();
 }
 
+void MainWindow::onGamescopeArgsChanged( const QString & text )
+{
+	/*bool storageModified =*/ STORE_PRESET_OPTION( .gamescopeArgs, text );
+
+	//scheduleSavingOptions( storageModified );
+	updateLaunchCommand();
+}
+
 void MainWindow::onLaunchBtnClicked()
 {
 	executeLaunchCommand();
@@ -6188,14 +6200,21 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 	// Wrap the whole command in a gamescope fullscreen instance, so that on Steam Deck / handhelds
 	// the engine always gets a visible, focused window instead of opening an invisible one in the background.
 	// On a Steam Deck this is always done automatically (the per-preset toggle only matters on other platforms).
+	//
+	// SteamOS game mode already runs the entire session under gamescope, so wrapping the engine in a
+	// second, nested gamescope would break gamescope's Vulkan swapchain layer ("non-Gamescope swapchain").
+	// In that case the engine is started directly and inherits the session's compositor.
  #if !IS_WINDOWS && !IS_MACOS
-	if (os::isSteamDeck() || (selectedPreset && selectedPreset->useGamescope))
+	if (!os::isInsideGamescope() && (os::isSteamDeck() || (selectedPreset && selectedPreset->useGamescope)))
 	{
 		// -e enables Steam integration; on SteamOS the Steam client is always running, while
 		//   a custom-Linux user who enables gamescope for other reasons might not have Steam.
 		QString gamescopeCmd = QStringLiteral( "gamescope -f" );
 		if (os::isSteamDeck())
 			gamescopeCmd += QStringLiteral( " -e" );
+		// optional user-supplied extra gamescope arguments for this preset
+		if (selectedPreset && !selectedPreset->gamescopeArgs.trimmed().isEmpty())
+			gamescopeCmd += QStringLiteral( " " ) + selectedPreset->gamescopeArgs.trimmed();
 		gamescopeCmd += QStringLiteral( " --" );
 		prependCommandWith( cmd, gamescopeCmd, opts.quotePaths );
 	}

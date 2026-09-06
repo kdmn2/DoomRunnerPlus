@@ -874,6 +874,16 @@ bool isSteamDeck()
 	return qEnvironmentVariable("STEAM_DECK") == QStringLiteral("1");
 }
 
+// SteamOS game mode runs the entire session under gamescope, so the session desktop is "gamescope".
+// Nesting another gamescope instance around an engine would break gamescope's Vulkan swapchain layer.
+bool isInsideGamescope()
+{
+	const QString sessionDesktop = qEnvironmentVariable("XDG_SESSION_DESKTOP");
+	const QString currentDesktop  = qEnvironmentVariable("XDG_CURRENT_DESKTOP");
+	return sessionDesktop.contains("gamescope", Qt::CaseInsensitive)
+		|| currentDesktop.contains("gamescope", Qt::CaseInsensitive);
+}
+
 QList< MonitorInfo > listMonitors()
 {
 	QList< MonitorInfo > monitors;
