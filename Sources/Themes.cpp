@@ -688,7 +688,13 @@ void setAppStyle( const QString & userStyleName )
 void applyUiScale( double scale )
 {
 	QFont scaledFont = c_defaultUiFont;
-	scaledFont.setPointSizeF( c_defaultUiFont.pointSizeF() * scale );
+	// Support fonts that are specified in either points or pixels - on some setups
+	// (e.g. the Steam Deck) the default font is pixel based, in which case
+	// pointSizeF() is -1 and scaling it would silently do nothing.
+	if (c_defaultUiFont.pointSizeF() > 0)
+		scaledFont.setPointSizeF( c_defaultUiFont.pointSizeF() * scale );
+	else if (c_defaultUiFont.pixelSize() > 0)
+		scaledFont.setPixelSize( int( c_defaultUiFont.pixelSize() * scale ) );
 	QApplication::setFont( scaledFont );
 }
 

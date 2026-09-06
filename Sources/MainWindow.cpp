@@ -2832,6 +2832,7 @@ void MainWindow::runSetupDialog()
 		modSettings = std::move( dialog.modSettings );
 		settings = std::move( dialog.settings );
 		appearance = std::move( dialog.appearance );
+		themes::applyUiScale( appearance.uiScale );  // make sure the whole main window is rescaled
 
 		// update all stored paths
 		togglePathStyle( settings.pathStyle );
@@ -6274,7 +6275,7 @@ void MainWindow::updateLaunchCommand()
 		return;  // no point in generating a command if we don't even know the engine, it determines everything
 	}
 
-	QString currentCommand = ui->commandLine->text();
+	QString currentCommand = ui->commandLine->toPlainText();
 
 	QString engineExeDir = fs::getAbsoluteParentDir( selectedEngine->executablePath );
 
@@ -6297,7 +6298,7 @@ void MainWindow::updateLaunchCommand()
 	{
 		//static int updateCnt = 1;
 		//logDebug() << "    updating " << updateCnt++;
-		ui->commandLine->setText( newCommand );
+		ui->commandLine->setPlainText( newCommand );
 	}
 }
 

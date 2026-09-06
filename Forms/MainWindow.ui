@@ -2743,39 +2743,51 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLineEdit" name="commandLine">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="launchBtn">
-        <property name="minimumSize">
-         <size>
-          <width>90</width>
-          <height>28</height>
-         </size>
-        </property>
-        <property name="toolTip">
-         <string>Execute the final launch command (F10)</string>
-        </property>
-        <property name="text">
-         <string>Launch!</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../Resources/Resources.qrc">
-          <normaloff>:/Play.png</normaloff>:/Play.png</iconset>
-        </property>
-        <property name="shortcut">
-         <string>F10</string>
-        </property>
-       </widget>
-      </item>
+       <item>
+        <widget class="QPlainTextEdit" name="commandLine">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>56</height>
+          </size>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="lineWrapMode">
+          <enum>QPlainTextEdit::WidgetWidth</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="launchBtn">
+         <property name="minimumSize">
+          <size>
+           <width>170</width>
+           <height>56</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Execute the final launch command (F10)</string>
+         </property>
+         <property name="text">
+          <string>Launch!</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../Resources/Resources.qrc">
+           <normaloff>:/Play.png</normaloff>:/Play.png</iconset>
+         </property>
+         <property name="shortcut">
+          <string>F10</string>
+         </property>
+        </widget>
+       </item>
      </layout>
     </item>
    </layout>
