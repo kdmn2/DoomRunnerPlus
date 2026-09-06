@@ -201,6 +201,7 @@ struct LaunchOptions
 	bool noAutoLoad = false;      ///< -noautoload
 	bool noAutoExec = false;      ///< -noautoexec
 	bool allowDuplicates = false; ///< -allowduplicates
+	bool useGamepad = false;      ///< +joy_enable 1 (ZDoom-family ports only)
 
 	QJsonObject serialize() const;
 	void deserialize( const JsonObjectCtx & optsJs );
@@ -478,6 +479,7 @@ struct AppearanceSettings
 	WindowGeometry geometry;
 	QString appStyle;
 	ColorScheme colorScheme = ColorScheme::SystemDefault;
+	double uiScale = 1.0;   ///< UI font scale (1.0 = system default size)
 
 	void serialize( QJsonObject & appearanceJs ) const;
 	void deserialize( const JsonObjectCtx & appearanceJs, bool loadGeometry );

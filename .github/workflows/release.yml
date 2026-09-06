@@ -154,7 +154,7 @@ jobs:
           path: DoomRunner
       - name: Install dependencies
         working-directory: DoomRunner
-        run: brew install qt minizip
+        run: brew install qt minizip sdl2
       - name: Build and package (.dmg)
         working-directory: DoomRunner
         run: |

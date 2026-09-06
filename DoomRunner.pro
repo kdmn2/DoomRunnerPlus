@@ -108,6 +108,7 @@ HEADERS += \
 	Sources/Themes.hpp \
 	Sources/UpdateChecker.hpp \
 	Sources/UserData.hpp \
+	Sources/GamepadInput.hpp \
 
 SOURCES += \
 	Sources/DataModels/GenericListModel.cpp \
@@ -167,6 +168,7 @@ SOURCES += \
 	Sources/UpdateChecker.cpp \
 	Sources/UserData.cpp \
 	Sources/main.cpp \
+	Sources/GamepadInput.cpp \
 
 FORMS += \
 	Forms/AboutDialog.ui \
@@ -245,6 +247,25 @@ macx {
 LIBS += -lminizip
 equals(QT_MAJOR_VERSION, 5): LIBS += -lbz2
 win32: LIBS += -lole32 -luuid -ldwmapi -lversion
+
+
+#-- gamepad input ---------------------------------
+
+# SDL2 translates gamepad input into key events, so the UI can be navigated
+# with a controller. When SDL2 is not available the feature is disabled and
+# the application still builds normally.
+# Windows is excluded because its release package is a statically linked exe,
+# and we don't want to bundle a separate SDL2 runtime with it.
+!win32 {
+	CONFIG += link_pkgconfig
+	packagesExist(sdl2) {
+		message("SDL2 found - gamepad input enabled")
+		PKGCONFIG += sdl2
+		DEFINES += ENABLE_GAMEPAD
+	} else {
+		message("SDL2 not found - gamepad input disabled")
+	}
+}
 
 
 #-- user configuration ---------------------------

@@ -102,6 +102,16 @@ SetupDialog::SetupDialog(
 		default:                 ui->schemeBtn_system->click(); break;
 	}
 
+	ui->fontScaleCmbBox->addItem( "Small (75%)",         0.75 );
+	ui->fontScaleCmbBox->addItem( "Default (100%)",      1.0 );
+	ui->fontScaleCmbBox->addItem( "Large (125%)",        1.25 );
+	ui->fontScaleCmbBox->addItem( "Extra large (150%)",  1.5 );
+	ui->fontScaleCmbBox->addItem( "Huge (200%)",         2.0 );
+	{
+		int scaleIdx = ui->fontScaleCmbBox->findData( appearance.uiScale );
+		ui->fontScaleCmbBox->setCurrentIndex( scaleIdx >= 0 ? scaleIdx : 1 );  // default to 100%
+	}
+
 	// mark invalid paths
 	highlightDirPathIfInvalid( ui->iwadDirLine, iwadSettings.dir );
 	highlightDirPathIfInvalid( ui->mapDirLine, mapSettings.dir );
@@ -125,6 +135,7 @@ SetupDialog::SetupDialog(
 	connect( ui->schemeBtn_system, &QRadioButton::clicked, this, &ThisClass::onDefaultSchemeChosen );
 	connect( ui->schemeBtn_dark, &QRadioButton::clicked, this, &ThisClass::onDarkSchemeChosen );
 	connect( ui->schemeBtn_light, &QRadioButton::clicked, this, &ThisClass::onLightSchemeChosen );
+	connect( ui->fontScaleCmbBox, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &ThisClass::onFontScaleSelected );
 
 	connect( ui->showEngineOutputChkBox, &QCheckBox::toggled, this, &ThisClass::onShowEngineOutputToggled );
 	connect( ui->closeOnLaunchChkBox, &QCheckBox::toggled, this, &ThisClass::onCloseOnLaunchToggled );
@@ -680,6 +691,13 @@ void SetupDialog::onLightSchemeChosen()
 	appearance.colorScheme = ColorScheme::Light;
 
 	themes::setAppColorScheme( appearance.colorScheme );
+}
+
+void SetupDialog::onFontScaleSelected( int index )
+{
+	appearance.uiScale = ui->fontScaleCmbBox->itemData( index ).toDouble();
+
+	themes::applyUiScale( appearance.uiScale );
 }
 
 

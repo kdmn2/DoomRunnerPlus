@@ -363,6 +363,7 @@ ColorScheme schemeFromString( const QString & schemeStr )
 static QString c_defaultStyleName;  ///< style active when application starts, depends on system settings
 static QStringList c_availableStyleNames;  ///< styles available on this operating system and graphical environment
 static QString g_currentRealStyleName;  ///< the application style that was really set after examining system settings
+static QFont c_defaultUiFont;  ///< system default UI font, captured at startup so UI scaling never compounds
 
 // idiotic workaround, because Qt is fucking stupid
 //
@@ -637,6 +638,8 @@ void init()
 
 	initStyles();  // initialize available style names
 
+	c_defaultUiFont = QApplication::font();  // capture the system default font for UI scaling
+
  #if IS_WINDOWS
 	// Qt on Windows does not automatically follow OS preferences, so when the application starts
 	// we have to check the OS settings and manually override the default theme with our dark one in case it's enabled.
@@ -680,6 +683,13 @@ void setAppStyle( const QString & userStyleName )
 	}
 
 	setQtStyle( realStyleName );
+}
+
+void applyUiScale( double scale )
+{
+	QFont scaledFont = c_defaultUiFont;
+	scaledFont.setPointSizeF( c_defaultUiFont.pointSizeF() * scale );
+	QApplication::setFont( scaledFont );
 }
 
 void updateWindowBorder( [[maybe_unused]] QWidget * window )

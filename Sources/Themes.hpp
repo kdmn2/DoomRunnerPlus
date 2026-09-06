@@ -87,6 +87,12 @@ QString getDefaultAppStyle();
   * init() must be called before calling this function. */
 void setAppStyle( const QString & styleName );
 
+// UI scaling
+
+/// Scales the default application font, so that the whole UI grows/shrinks proportionally.
+/** 1.0 = system default size. init() must be called before calling this function. */
+void applyUiScale( double scale );
+
 
 } // namespace themes
 

@@ -19,6 +19,7 @@
 #include "UserData.hpp"
 #include "UpdateChecker.hpp"
 #include "Themes.hpp"  // SystemThemeWatcher
+#include "GamepadInput.hpp"
 class JsonDocumentCtx;
 struct OptionsToLoad;
 
@@ -446,6 +447,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	QStringList compatOptsCmdArgs;  ///< string with command line args created from compatibility options, cached so that it doesn't need to be regenerated on every command line update
 
 	UpdateChecker updateChecker;
+	GamepadInput gamepadInput;  ///< bridges a connected gamepad to the UI as key events
 
  #if IS_WINDOWS
 	SystemThemeWatcher systemThemeWatcher;

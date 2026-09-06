@@ -25,6 +25,7 @@
 #include "OptionsSerializer.hpp"
 #include "UpdateChecker.hpp"
 #include "Themes.hpp"
+#include "GamepadInput.hpp"
 #include "EngineTraits.hpp"
 #include "DoomFiles.hpp"
 #include "IdgamesTab.hpp"
@@ -1167,6 +1168,11 @@ MainWindow::MainWindow()
 		STORE_LAUNCH_OPTION( .allowDuplicates, checked );
 		updateLaunchCommand();
 	});
+	connect( ui->useGamepadChkBox, &QCheckBox::toggled, this, [ this ]( bool checked )
+	{
+		STORE_LAUNCH_OPTION( .useGamepad, checked );
+		updateLaunchCommand();
+	});
 	connect( ui->compatOptsBtn, &QPushButton::clicked, this, &ThisClass::onCompatOptsBtnClicked );
 	connect( ui->compatModeCmbBox, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &ThisClass::onCompatModeSelected );
 
@@ -1250,6 +1256,8 @@ MainWindow::MainWindow()
 	connect( ui->gamescopeChkBox, &QCheckBox::toggled, this, &ThisClass::onGamescopeToggled );
 	connect( ui->gamescopeArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGamescopeArgsChanged );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
+
+	gamepadInput.start();
 }
 
 void MainWindow::adjustUi()
@@ -2594,6 +2602,7 @@ void MainWindow::restoreLaunchAndMultOptions( LaunchOptions & launchOpts, const 
 	ui->noAutoLoadChkBox->setChecked( launchOpts.noAutoLoad );
 	ui->noAutoExecChkBox->setChecked( launchOpts.noAutoExec );
 	ui->allowDuplicatesChkBox->setChecked( launchOpts.allowDuplicates );
+	ui->useGamepadChkBox->setChecked( launchOpts.useGamepad );
 }
 
 void MainWindow::restoreGameplayOptions( const GameplayOptions & opts )
@@ -2691,6 +2700,9 @@ void MainWindow::restoreAppearance( const AppearanceSettings & appearance, bool 
 
 	if (IS_WINDOWS || appearance.colorScheme != ColorScheme::SystemDefault)
 		themes::setAppColorScheme( appearance.colorScheme );
+
+	if (appearance.uiScale != 1.0)
+		themes::applyUiScale( appearance.uiScale );
 
 	if (restoreGeometry)
 	{
@@ -3224,6 +3236,7 @@ void MainWindow::clearPresetSubWidgets()
 		ui->noAutoLoadChkBox->setChecked( false );
 		ui->noAutoExecChkBox->setChecked( false );
 		ui->allowDuplicatesChkBox->setChecked( false );
+		ui->useGamepadChkBox->setChecked( false );
 	}
 
 	if (settings.gameOptsStorage == StoreToPreset)
@@ -4399,6 +4412,7 @@ void MainWindow::toggleOptionsSubwidgets( LaunchMode mode )
 	ui->noAutoLoadChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 	ui->noAutoExecChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 	ui->allowDuplicatesChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
+	ui->useGamepadChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->hasDetailedGameOptions() );
 
 	ui->pistolStartChkBox->setEnabled( shouldEnablePistolStart( mode, selectedEngine ) );
 	ui->allowCheatsChkBox->setEnabled( shouldEnableAllowCheats( mode, selectedEngine ) );
@@ -6052,6 +6066,8 @@ os::ShellCommand MainWindow::generateLaunchCommand( LaunchCommandOptions opts )
 		cmd.arguments << "-noautoexec";
 	if (ui->allowDuplicatesChkBox->isEnabled() && ui->allowDuplicatesChkBox->isChecked())
 		cmd.arguments << "-allowduplicates";
+	if (ui->useGamepadChkBox->isEnabled() && ui->useGamepadChkBox->isChecked())
+		cmd.arguments << "+joy_enable" << "1";
 
 	const CompatibilityOptions & activeCompatOpts = activeCompatOptions();
 	if (ui->compatModeCmbBox->isEnabled() && activeCompatOpts.compatMode >= 0)

@@ -1142,6 +1142,16 @@
                     </property>
                    </widget>
                   </item>
+                  <item>
+                   <widget class="QCheckBox" name="useGamepadChkBox">
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;+joy_enable 1&lt;br/&gt;&lt;/span&gt;Passes a command-line argument that enables gamepad (joystick) input. Only affects ZDoom-family ports &lt;span style=&quot; font-style:italic;&quot;&gt;(GZDoom, UZDoom, Zandronum, ...)&lt;/span&gt;; other ports ignore or reject it.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                    <property name="text">
+                     <string>Gamepad</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                </layout>

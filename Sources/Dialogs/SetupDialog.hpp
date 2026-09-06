@@ -105,6 +105,7 @@ class SetupDialog : public QDialog, public DialogWithPaths {
 	void onDefaultSchemeChosen();
 	void onDarkSchemeChosen();
 	void onLightSchemeChosen();
+	void onFontScaleSelected( int index );
 
 	// other
 

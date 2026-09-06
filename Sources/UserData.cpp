@@ -307,6 +307,7 @@ QJsonObject LaunchOptions::serialize() const
 	optsJs["no_autoload"] = opts.noAutoLoad;
 	optsJs["no_autoexec"] = opts.noAutoExec;
 	optsJs["allow_duplicates"] = opts.allowDuplicates;
+	optsJs["use_gamepad"] = opts.useGamepad;
 
 	return optsJs;
 }
@@ -326,6 +327,7 @@ void LaunchOptions::deserialize( const JsonObjectCtx & optsJs )
 	opts.noAutoLoad = optsJs.getBool( "no_autoload", opts.noAutoLoad );
 	opts.noAutoExec = optsJs.getBool( "no_autoexec", opts.noAutoExec );
 	opts.allowDuplicates = optsJs.getBool( "allow_duplicates", opts.allowDuplicates );
+	opts.useGamepad = optsJs.getBool( "use_gamepad", opts.useGamepad, AllowMissing );
 }
 
 QJsonObject MultiplayerOptions::serialize() const
@@ -848,6 +850,7 @@ void AppearanceSettings::serialize( QJsonObject & settingsJs ) const
 	settingsJs["geometry"] = settings.geometry.serialize();
 	settingsJs["app_style"] = settings.appStyle.isNull() ? QJsonValue( QJsonValue::Null ) : settings.appStyle;
 	settingsJs["color_scheme"] = schemeToString( settings.colorScheme );
+	settingsJs["ui_scale"] = settings.uiScale;
 }
 
 void AppearanceSettings::deserialize( const JsonObjectCtx & settingsJs, bool loadGeometry )
@@ -863,6 +866,7 @@ void AppearanceSettings::deserialize( const JsonObjectCtx & settingsJs, bool loa
 	}
 
 	settings.appStyle = settingsJs.getString( "app_style", {}, AllowMissing );  // null value means system-default
+	settings.uiScale  = settingsJs.getDouble( "ui_scale", settings.uiScale, AllowMissing );
 
 	ColorScheme colorScheme = schemeFromString( settingsJs.getString( "color_scheme" ) );
 	if (colorScheme != ColorScheme::_EnumEnd)
