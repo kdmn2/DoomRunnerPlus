@@ -13,6 +13,8 @@ Because of this, there is no guarantee of code quality, correctness, or that eve
 ## What's new vs. original Doom Runner
 
 * **WAD Downloader** — browse and download WADs from the [/idgames archive](https://www.doomworld.com/idgames/), the [Cacowards](https://www.doomworld.com/cacowards/) and [Top WADs](https://www.doomworld.com/topwads/) lists, with built-in search, a shared activity log and sortable result columns.
+
+  ![](Screenshots/WadDownloader.png "WAD Downloader")
 * **Steam Deck / gamescope support** — fixes the "nested gamescope" crash when running in Steam game mode, adds a configurable gamescope-arguments field, and makes the UI stay legible on the Deck's screen.
 * **Touch-friendly UI** — a larger Launch button and a word-wrapped, multi-line "final launch command" display.
 * **Adjustable font size** — the whole UI (including the main window) can be scaled up or down from the Initial Setup window.
@@ -21,6 +23,29 @@ Because of this, there is no guarantee of code quality, correctness, or that eve
 * **Engine fixes** — launch engines by their full path (instead of a `./name` relative path), load PWADs with the correct `-file` flag (not `-merge`), load BEX patches via `-deh`, and correctly classify Woof as an MBF-family port.
 * **Launch reliability** — a guard against accidentally launching two copies of the same engine, plus a diagnostic that shows the engine's console output if it exits within the first ~5 seconds (e.g. when a WAD fails to load).
 * **Automated release packages** — Linux AppImage + plain zip + Flatpak, Windows zip, and macOS DMGs (arm64 + x86_64), all built by GitHub Actions and published to the Releases page.
+
+## Using the WAD Downloader
+
+The **WAD Downloader** tab (the rightmost tab in the main window) lets you browse and download WADs without leaving the launcher. It contains three sub-tabs, and downloads land in the folder you choose with **Browse...**. Use the **Autosort**, **Unpack**, **Delete after extracting** and **Download 4 at a time** options to control how the files are saved. Progress and messages appear in the shared activity log at the bottom.
+
+### IdGames
+Browse and download from the Doomworld [/idgames archive](https://www.doomworld.com/idgames/).
+
+1. Type a search phrase (at least 3 characters; `*` works as a wildcard) and press **Search**, or press **Show All** to list the whole archive.
+2. Tick the entries you want, then press **Download**. Downloading WADs here offers to add them to the mod list automatically.
+
+### Cacowards
+Browse and download WADs from the [Cacowards](https://www.doomworld.com/cacowards/) award list. The list is normally fetched from /idgames on its own. If the automatic refresh is blocked, you can load it manually from your browser:
+
+**Importing the Cacowards via XML:**
+1. Press **Generate list**. If the automatic fetch is blocked, the launcher opens [doomwiki's Special:Export page](https://doomwiki.org/wiki/Special:Export) in your browser with all the Cacowards pages pre-listed.
+2. In the browser, press **Export** to download the XML file.
+3. Back in the launcher, press **Import...** and open that XML file. The Cacowards list is then populated (the entries carry their download paths), and you can download them as usual.
+
+### Top Lists
+Browse the [Doomworld Top WADs](https://www.doomworld.com/topwads/) list. Press **Generate list** to populate or refresh it, tick the entries you want, then **Download**.
+
+> **Note:** downloads from the Cacowards and Top Lists tabs are saved to the target folder but are not automatically added to your mod list (only IdGames offers that). You can add them to a preset afterwards.
 
 ## Download
 
