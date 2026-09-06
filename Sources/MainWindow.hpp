@@ -131,8 +131,6 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onMapsAfterModsToggled( bool checked );
 	void onModIconsToggled();
 
-	void addDownloadedMod( const QString & path );
-
 	void onModeChosen_Default();
 	void onModeChosen_LaunchMap();
 	void onModeChosen_SavedGame();

@@ -34,7 +34,7 @@ The **WAD Downloader** tab (the rightmost tab in the main window) lets you brows
 Browse and download from the Doomworld [/idgames archive](https://www.doomworld.com/idgames/).
 
 1. Type a search phrase (at least 3 characters; `*` works as a wildcard) and press **Search**, or press **Show All** to list the whole archive.
-2. Tick the entries you want, then press **Download**. Downloading WADs here offers to add them to the mod list automatically.
+2. Tick the entries you want, then press **Download**. The files are saved to the target folder (they are not added to any preset).
 
 ### Cacowards
 Browse and download WADs from the [Cacowards](https://www.doomworld.com/cacowards/) award list. The list is normally fetched from /idgames on its own. If the automatic refresh is blocked, you can load it manually from your browser:
@@ -47,7 +47,7 @@ Browse and download WADs from the [Cacowards](https://www.doomworld.com/cacoward
 ### Top Lists
 Browse the [Doomworld Top WADs](https://www.doomworld.com/topwads/) list. Press **Generate list** to populate or refresh it, tick the entries you want, then **Download**.
 
-> **Note:** downloads from the Cacowards and Top Lists tabs are saved to the target folder but are not automatically added to your mod list (only IdGames offers that). You can add them to a preset afterwards.
+> **Note:** Downloads are **never** added to a preset automatically — they are only saved to the target folder (and optionally unpacked). To use a downloaded WAD, add it to a preset from the Files tab afterwards.
 
 ## Download
 
