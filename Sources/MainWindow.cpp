@@ -1716,6 +1716,10 @@ void MainWindow::onWindowShown()
 		autoselectItems();
 	}
 
+	// A preset must always be selected, otherwise the setting widgets would stay disabled.
+	// Covers separator-only lists and any case where the load above left nothing selected.
+	ensurePresetSelected();
+
 	// make keyboard actions control the preset list by default
 	ui->presetListView->setFocus();
 
@@ -2163,6 +2167,10 @@ void MainWindow::restoreLoadedOptions( OptionsToLoad && opts )
 	applyDownloaderLogSettings();
 
 	restoringOptionsInProgress = false;
+
+	// A preset must always exist and be selected, otherwise the settings widgets stay disabled.
+	ensureAtLeastOnePreset();
+	ensurePresetSelected();
 
 	updateLaunchCommand();
 }
@@ -3174,11 +3182,73 @@ void MainWindow::onPresetToggled( const QItemSelection & /*selected*/, const QIt
 		togglePresetSubWidgets( selectedPreset );  // enable all widgets that contain preset settings
 		restorePreset( *selectedPreset );  // load the content of the selected preset into the other widgets
 	}
-	else  // the preset was deselected using CTRL
+	else  // the preset was deselected using CTRL (or a separator got selected)
 	{
-		togglePresetSubWidgets( nullptr );  // disable the widgets so that user can't enter data that would not be saved anywhere
-		clearPresetSubWidgets();  // clear the other widgets that display the content of the preset
+		// We never want the launcher to end up with no preset selected, otherwise the settings widgets
+		// become disabled and the user is stuck. Re-select the first usable preset to rescue the state.
+		// (Skip this while the list is being bulk-modified or options restored - the caller fixes it up then.)
+		if (!suppressPresetSelectionRescue_ && !restoringOptionsInProgress)
+		{
+			ensurePresetSelected();
+			// the re-selection fires onPresetToggled again, which will enable the widgets and restore the preset
+		}
+		else
+		{
+			togglePresetSubWidgets( nullptr );  // disable the widgets so that user can't enter data that would not be saved anywhere
+			clearPresetSubWidgets();  // clear the other widgets that display the content of the preset
+		}
 	}
+}
+
+void MainWindow::ensureAtLeastOnePreset()
+{
+	// Separators don't count as usable presets.
+	bool hasUsablePreset = false;
+	for (int i = 0; i < presetModel.size(); ++i)
+	{
+		if (!presetModel[ i ].isSeparator)
+		{
+			hasUsablePreset = true;
+			break;
+		}
+	}
+
+	if (hasUsablePreset)
+		return;
+
+	// recreate the last preset, so that the user always has something to work with
+	Preset dummy( "Dummy preset" );
+
+	// appending internally deselects and re-selects the list, which would run our selection rescue again
+	const bool wasSuppressed = suppressPresetSelectionRescue_;
+	suppressPresetSelectionRescue_ = true;
+	wdg::appendItem( ui->presetListView, presetModel, dummy );  // appends and selects it (already selected by the append)
+	suppressPresetSelectionRescue_ = wasSuppressed;
+
+	scheduleSavingOptions( true );
+}
+
+void MainWindow::ensurePresetSelected()
+{
+	if (selectedPreset && !selectedPreset->isSeparator)
+		return;
+
+	for (int i = 0; i < presetModel.size(); ++i)
+	{
+		if (!presetModel[ i ].isSeparator)
+		{
+			// selecting fires onPresetToggled again, which enables the widgets and restores the preset;
+			// suppress our rescue while the view re-selects so it doesn't recurse
+			const bool wasSuppressed = suppressPresetSelectionRescue_;
+			suppressPresetSelectionRescue_ = true;
+			wdg::selectSetCurrentAndScrollTo( ui->presetListView, i );
+			suppressPresetSelectionRescue_ = wasSuppressed;
+			return;
+		}
+	}
+
+	// no usable preset exists - create one
+	ensureAtLeastOnePreset();
 }
 
 // Enables UI elements whose state is stored in a preset,
@@ -3724,10 +3794,19 @@ void MainWindow::presetDelete()
 			return;
 	}
 
+	// prevent our selection-rescue from kicking in while the list is being bulk-modified
+	const bool wasSuppressed = suppressPresetSelectionRescue_;
+	suppressPresetSelectionRescue_ = true;
 	const auto removedIndexes = wdg::removeSelectedItems( ui->presetListView, presetModel );
 	if (removedIndexes.isEmpty())  // no item was selected
+	{
+		suppressPresetSelectionRescue_ = wasSuppressed;
 		return;
+	}
+	suppressPresetSelectionRescue_ = wasSuppressed;
 
+	// If a preset is still selected, update the widgets to its content. Otherwise ones that got removed
+	// supplied all the configs, so we need to clear the widgets.
 	if (selectedPreset)
 	{
 		restorePreset( *selectedPreset );  // select the next preset
@@ -3737,6 +3816,9 @@ void MainWindow::presetDelete()
 		togglePresetSubWidgets( nullptr );  // disable the widgets so that user can't enter data that would not be saved anywhere
 		clearPresetSubWidgets();
 	}
+
+	// Always keep at least one preset in the list.
+	ensureAtLeastOnePreset();
 
 	scheduleSavingOptions();
 }

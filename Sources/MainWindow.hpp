@@ -106,6 +106,12 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onPresetDataChanged( int row, int count, const QVector<int> & roles );
 	void onPresetsReordered();
 
+	/// Appends a new empty "Dummy preset" if the preset list contains no usable preset.
+	void ensureAtLeastOnePreset();
+
+	/// Re-selects the first usable preset if none is currently selected.
+	void ensurePresetSelected();
+
 	void searchPanelToggled( bool expanded );
 	void searchPresets( const QString & phrase, bool caseSensitive, bool useRegex );
 
@@ -446,6 +452,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	bool restoringOptionsInProgress = false;  ///< flag used to temporarily prevent storing selected values to a preset or global launch options
 	bool restoringPresetInProgress = false;   ///< flag used to temporarily prevent storing selected values to a preset or global launch options
 	bool restoringPresetFilesInProgress = false;   ///< flag used to temporarily prevent updating widgets that depend on files to be loaded
+	bool suppressPresetSelectionRescue_ = false;   ///< whether the preset selection must not be auto-restored right now (bulk modification in progress)
 
 	QString selectedPresetBeforeSearch;   ///< which preset was selected before the search results were displayed
 
