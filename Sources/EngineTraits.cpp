@@ -47,6 +47,7 @@ static const char * const engineFamilyStrings [] =
 	"MBF",
 	"EDGE",
 	"KEX",
+	"Helion",
 };
 static_assert( std::size(engineFamilyStrings) == size_t(EngineFamily::_EnumEnd), "Please update this table too" );
 
@@ -84,6 +85,7 @@ static const QHash< QString, EngineFamily > knownEngineFamilies =
 	{ "3dge",              EngineFamily::EDGE },
 	{ "edge-classic",      EngineFamily::EDGE },
 	{ "doom_gog",          EngineFamily::KEX },
+	{ "helion",            EngineFamily::Helion },
 };
 
 /// Engine families for known application names.
@@ -177,6 +179,19 @@ static const EngineFamilyTraits engineFamilyTraits [] =
 		.mapParamStyle = MapParamStyle::Warp,
 		.compatModeStyle = CompatModeStyle::None,
 	},
+
+	//Helion (https://github.com/Helion-Engine/Helion) - .NET source port.
+	{
+		.configFileSuffix = "ini",    // config.ini
+		.saveFileSuffix = "hsg",      // Helion saves are zip archives named *.hsg
+		.loadFileParam = "-file",
+		.saveDirParam = "-savedir",
+		.multHostParam = nullptr,     // no multiplayer support (only -solo-net)
+		.multPlayerCountParam = nullptr,
+		.multJoinParam = nullptr,
+		.mapParamStyle = MapParamStyle::Map,   // supports +map (and -warp)
+		.compatModeStyle = CompatModeStyle::Helion,  // +complevel vanilla/boom/mbf/mbf21
+	},
 };
 static_assert( std::size(engineFamilyTraits) == std::size(engineFamilyStrings), "Please update this table too" );
 
@@ -234,6 +249,15 @@ static const QStringList prboomCompatLevels =
 
 static const QStringList noCompatModes = {};
 
+// Helion accepts named compatibility levels via "+complevel <name>".
+static const QStringList helionCompatLevels =
+{
+	"Vanilla",  // "Doom (strict vanilla compatibility)"
+	"Boom",
+	"MBF",
+	"MBF21",
+};
+
 
 //======================================================================================================================
 // implementation
@@ -247,6 +271,8 @@ const QStringList & getCompatModes( CompatModeStyle style )
 		return zdoomCompatModes;
 	else if (style == CompatModeStyle::PrBoom)
 		return prboomCompatLevels;
+	else if (style == CompatModeStyle::Helion)
+		return helionCompatLevels;
 	else
 		return noCompatModes;
 }
@@ -662,6 +688,10 @@ QString EngineTraits::getDefaultConfigFileName() const
 		else
 			return firstPart%"-"%os::getUserName()%".ini";   // -> gzdoom-Youda.ini
 	}
+	else if (_family == EngineFamily::Helion)
+	{
+		return "config.ini";
+	}
 	else
 	{
 		return exeBaseName()%".cfg";
@@ -692,7 +722,7 @@ const char * EngineTraits::getPistolStartOption() const
 {
 	// https://doomwiki.org/wiki/Source_port_parameters#-pistolstart
 	const QString & name = normalizedName();
-	if (_family == EngineFamily::ChocolateDoom || _family == EngineFamily::PrBoom || name == "woof")
+	if (_family == EngineFamily::ChocolateDoom || _family == EngineFamily::PrBoom || name == "woof" || _family == EngineFamily::Helion)
 		return "-pistolstart";
 	else
 		return nullptr;
@@ -757,6 +787,11 @@ QStringList EngineTraits::getLoadSavedGameArgs(
 	{
 		return { "-loadgame", makeCmdSaveFilePath( runDirRebaser, saveDir, saveFileName ) };
 	}
+	else if (_family == EngineFamily::Helion)
+	{
+		// Helion's -loadgame takes a save file name/path (unlike PrBoom which uses a slot number).
+		return { "-loadgame", makeCmdSaveFilePath( runDirRebaser, saveDir, saveFileName ) };
+	}
 	else
 	{
 		return { "-loadgame", getSaveNumberFromFileName( saveFileName ) };
@@ -780,6 +815,13 @@ QStringList EngineTraits::getCompatModeArgs( int compatMode ) const
 	else if (compatModeStyle() == CompatModeStyle::PrBoom)
 	{
 		return { "-complevel", QString::number( compatMode ) };
+	}
+	else if (compatModeStyle() == CompatModeStyle::Helion)
+	{
+		const QStringList & modes = getCompatModes( CompatModeStyle::Helion );
+		if (compatMode >= 0 && compatMode < modes.size())
+			return { "+complevel", modes[ compatMode ] };
+		return {};
 	}
 	else
 	{

@@ -3404,6 +3404,15 @@ void MainWindow::toggleAndClearEngineDependentWidgets( const EngineInfo * engine
 	// by PrBoom-based and other non-ZDoom ports (they would reject the argument and fail to start).
 	ui->monitorCmbBox->setEnabled( engine && engine->supportsMonitorSelection() );
 	ui->showFpsChkBox->setEnabled( engine && engine->supportsShowFps() );
+
+	// Helion and similar ports don't support the following options.
+	ui->resolutionXLine->setEnabled( engine && engine->supportsResolution() );
+	ui->resolutionYLine->setEnabled( engine && engine->supportsResolution() );
+	ui->noSoundChkBox->setEnabled( engine && engine->supportsNoSound() );
+	ui->noSfxChkBox->setEnabled( engine && engine->supportsNoSfx() );
+
+	// Resume demo uses -recordfromto, which Helion does not support.
+	ui->launchMode_resumeDemo->setEnabled( !engine || engine->supportsResumeDemo() );
 }
 
 void MainWindow::onConfigSelected( int index )
@@ -4393,7 +4402,7 @@ void MainWindow::toggleOptionsSubwidgets( LaunchMode mode )
 	bool enableBasicGameplayOptions = isDirectLaunch( mode ) || mode == Default;
 	ui->noMonstersChkBox->setEnabled( enableBasicGameplayOptions );
 	ui->fastMonstersChkBox->setEnabled( enableBasicGameplayOptions );
-	ui->monstersRespawnChkBox->setEnabled( enableBasicGameplayOptions );
+	ui->monstersRespawnChkBox->setEnabled( enableBasicGameplayOptions && selectedEngine && selectedEngine->supportsMonstersRespawn() );
 
 	// extra gameplay / loading options
 	ui->gameplayTimeLimitSpinBox->setEnabled( enableBasicGameplayOptions );

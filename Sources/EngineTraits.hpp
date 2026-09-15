@@ -35,6 +35,7 @@ enum class CompatModeStyle
 	None,
 	ZDoom,   // +compatmode  https://zdoom.org/wiki/CVARs:Configuration#compatmode
 	PrBoom,  // -complevel   https://doom.fandom.com/wiki/PrBoom#Compatibility_modes_and_settings
+	Helion,  // +complevel   (named levels: Vanilla, Boom, MBF, MBF21)
 };
 
 const QStringList & getCompatModes( CompatModeStyle style );
@@ -48,6 +49,7 @@ enum class EngineFamily
 	MBF,  // Marine's Best Friend
 	EDGE,
 	KEX,
+	Helion,
 
 	_EnumEnd  ///< indicates an error
 };
@@ -193,6 +195,14 @@ class EngineTraits {
 	// rejected by other source ports (e.g. PrBoom-based ones), so they are only offered for ZDoom-family engines.
 	bool supportsShowFps() const                   { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
 	bool supportsMonitorSelection() const          { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
+
+	// Helion (a .NET source port) lacks several options that the other families support,
+	// so these are disabled when it is selected.
+	bool supportsMonstersRespawn() const           { assert( hasFamily() ); return _family != EngineFamily::Helion; }
+	bool supportsResolution() const                { assert( hasFamily() ); return _family != EngineFamily::Helion; }
+	bool supportsNoSound() const                   { assert( hasFamily() ); return _family != EngineFamily::Helion; }
+	bool supportsNoSfx() const                     { assert( hasFamily() ); return _family != EngineFamily::Helion; }
+	bool supportsResumeDemo() const                { assert( hasFamily() ); return _family != EngineFamily::Helion; }  // -recordfromto
 
 	const char * multHostParam() const             { assert( _familyTraits ); return _familyTraits->multHostParam; }
 	const char * multPlayerCountParam() const      { assert( _familyTraits ); return _familyTraits->multPlayerCountParam; }
