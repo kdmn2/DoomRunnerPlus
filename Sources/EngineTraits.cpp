@@ -66,6 +66,7 @@ static const QHash< QString, EngineFamily > knownEngineFamilies =
 	{ "prboom-plus",       EngineFamily::PrBoom },
 	{ "glboom",            EngineFamily::PrBoom },
 	{ "dsda-doom",         EngineFamily::PrBoom },
+	{ "nyan-doom",         EngineFamily::PrBoom },
 	{ "smmu",              EngineFamily::MBF },
 	{ "eternity",          EngineFamily::MBF },
 	{ "nugget-doom",       EngineFamily::MBF },

@@ -189,6 +189,11 @@ class EngineTraits {
 	bool hasNetMode() const                        { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
 	bool hasPlayerCustomization() const            { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
 
+	// These options are passed as ZDoom-style "+cvar value" command-line arguments and would be
+	// rejected by other source ports (e.g. PrBoom-based ones), so they are only offered for ZDoom-family engines.
+	bool supportsShowFps() const                   { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
+	bool supportsMonitorSelection() const          { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
+
 	const char * multHostParam() const             { assert( _familyTraits ); return _familyTraits->multHostParam; }
 	const char * multPlayerCountParam() const      { assert( _familyTraits ); return _familyTraits->multPlayerCountParam; }
 	const char * multJoinParam() const             { assert( _familyTraits ); return _familyTraits->multJoinParam; }

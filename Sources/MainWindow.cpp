@@ -3399,6 +3399,11 @@ void MainWindow::toggleAndClearEngineDependentWidgets( const EngineInfo * engine
 	bool enableAltScreenshotDir = shouldEnableAltScreenshotDir( engine, ui->altScreenshotDirPresetChkBox->isChecked() );
 	ui->altScreenshotDirLine->setEnabled( enableAltScreenshotDir );
 	ui->altScreenshotDirBtn->setEnabled( enableAltScreenshotDir );
+
+	// "Show FPS" and monitor selection are passed as ZDoom-style "+cvar" arguments and are not supported
+	// by PrBoom-based and other non-ZDoom ports (they would reject the argument and fail to start).
+	ui->monitorCmbBox->setEnabled( engine && engine->supportsMonitorSelection() );
+	ui->showFpsChkBox->setEnabled( engine && engine->supportsShowFps() );
 }
 
 void MainWindow::onConfigSelected( int index )
