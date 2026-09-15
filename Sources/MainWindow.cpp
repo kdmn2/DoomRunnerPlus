@@ -3405,6 +3405,19 @@ void MainWindow::toggleAndClearEngineDependentWidgets( const EngineInfo * engine
 	ui->monitorCmbBox->setEnabled( engine && engine->supportsMonitorSelection() );
 	ui->showFpsChkBox->setEnabled( engine && engine->supportsShowFps() );
 
+	// These video/audio and renderer settings are also passed as ZDoom "+cvar"/renderer arguments
+	// that PrBoom/MBF-based ports (woof, nugget-doom, eternity, ...) don't understand.
+	bool zdoomStyleVidSnd = engine && engine->supportsZDoomStyleSettings();
+	ui->fullscreenChkBox->setEnabled( zdoomStyleVidSnd );
+	ui->vsyncChkBox->setEnabled( zdoomStyleVidSnd );
+	ui->widescreenChkBox->setEnabled( zdoomStyleVidSnd );
+	ui->maxFpsSpinBox->setEnabled( zdoomStyleVidSnd );
+	ui->rendererCmbBox->setEnabled( zdoomStyleVidSnd );
+	ui->sfxVolumeSpinBox->setEnabled( zdoomStyleVidSnd );
+	ui->musicVolumeSpinBox->setEnabled( zdoomStyleVidSnd );
+	ui->sampleRateSpinBox->setEnabled( zdoomStyleVidSnd );
+	ui->outputBackendCmbBox->setEnabled( zdoomStyleVidSnd );
+
 	// Helion and similar ports don't support the following options.
 	ui->resolutionXLine->setEnabled( engine && engine->supportsResolution() );
 	ui->resolutionYLine->setEnabled( engine && engine->supportsResolution() );
@@ -4626,12 +4639,12 @@ void MainWindow::onMultiplayerToggled( bool checked )
 		bool enablePlayerCount = shouldEnablePlayerCount( true, multRole, selectedEngine );
 		ui->playerCountLabel->setEnabled( enablePlayerCount );
 		ui->playerCountSpinBox->setEnabled( enablePlayerCount );
-		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay );
-		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay );
+		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 		ui->timeLimitLabel->setEnabled( multRole == Server && isDeathMatch );
 		ui->timeLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
+		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 		bool enablePlayerCustomization = shouldEnablePlayerCustomization( true, selectedEngine );
 		ui->playerNameLabel->setEnabled( enablePlayerCustomization );
 		ui->playerNameLine->setEnabled( enablePlayerCustomization );
@@ -4677,12 +4690,12 @@ void MainWindow::onMultRoleSelected( int multRole )
 		bool enablePlayerCount = shouldEnablePlayerCount( true, multRole, selectedEngine );
 		ui->playerCountLabel->setEnabled( enablePlayerCount );
 		ui->playerCountSpinBox->setEnabled( enablePlayerCount );
-		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay );
-		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay );
+		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 		ui->timeLimitLabel->setEnabled( multRole == Server && isDeathMatch );
 		ui->timeLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
+		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 
 		if (multRole == Client && launchMode == LaunchMap)  // client doesn't select map, server does
 		{
@@ -4732,12 +4745,12 @@ void MainWindow::onGameModeSelected( int gameMode )
 		bool isDeathMatch = gameMode >= Deathmatch && gameMode <= AltTeamDeathmatch;
 		bool isTeamPlay = gameMode == TeamDeathmatch || gameMode == AltTeamDeathmatch || gameMode == Cooperative;
 
-		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay );
-		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay );
+		ui->teamDmgLabel->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->teamDmgSpinBox->setEnabled( multRole == Server && isTeamPlay && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 		ui->timeLimitLabel->setEnabled( multRole == Server && isDeathMatch );
 		ui->timeLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch );
-		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch );
+		ui->fragLimitLabel->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
+		ui->fragLimitSpinBox->setEnabled( multRole == Server && isDeathMatch && selectedEngine && selectedEngine->supportsZDoomStyleSettings() );
 	}
 
 	//scheduleSavingOptions( storageModified );

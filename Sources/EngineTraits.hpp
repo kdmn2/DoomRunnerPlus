@@ -196,6 +196,12 @@ class EngineTraits {
 	bool supportsShowFps() const                   { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
 	bool supportsMonitorSelection() const          { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
 
+	// The video/audio settings (+vid_fullscreen, +vid_vsync, +vid_maxfps, +snd_sfxvolume, +snd_output, ...),
+	// the renderer switch (-gl/-vulkan) and some multiplayer settings (+fraglimit, +teamdamage) are passed as
+	// ZDoom-style "+cvar value" arguments. Non-ZDoom source ports (PrBoom/MBF, e.g. woof, nugget-doom, eternity)
+	// reject these, so they are only offered for ZDoom-family engines.
+	bool supportsZDoomStyleSettings() const        { assert( hasFamily() ); return _family == EngineFamily::ZDoom; }
+
 	// Helion (a .NET source port) lacks several options that the other families support,
 	// so these are disabled when it is selected.
 	bool supportsMonstersRespawn() const           { assert( hasFamily() ); return _family != EngineFamily::Helion; }
