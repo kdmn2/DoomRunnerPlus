@@ -27,6 +27,12 @@
 namespace steam {
 
 
+/// Returns whether the main Steam client process is currently running.
+/** Steam reads its shortcuts only at startup and saves them back from memory when it exits,
+  * so a shortcut added while Steam is running may not appear or may get overwritten. */
+bool isSteamRunning();
+
+
 /// Adds a non-Steam game shortcut with the given name to Steam's list of shortcuts.
 /** The shortcut will point to the given executable with the given launch options (command line arguments)
   * and the given start directory as working directory.

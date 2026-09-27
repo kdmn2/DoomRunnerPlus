@@ -5452,6 +5452,22 @@ void MainWindow::onAddToSteamBtnClicked()
 		return;
 	}
 
+	// Steam reads its shortcuts only at startup and saves them back from memory when it exits,
+	// so a shortcut added while Steam is running may not appear or may get overwritten.
+	if (steam::isSteamRunning())
+	{
+		const auto answer = QMessageBox::warning( this, "Steam is running",
+			"Steam is currently running. Steam reads its shortcuts only when it starts and saves them back "
+			"when it exits, so a shortcut added now may not appear or may get overwritten.\n\n"
+			"For best results: fully quit Steam, then click \"Add to Steam\" again, and only then start Steam.\n\n"
+			"Do you want to continue anyway?",
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No );
+		if (answer != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
 	const QString currentWorkingDir = pathConvertor.workingDir().path();
 	const QString engineExeDir = fs::getAbsoluteParentDir( selectedEngine->executablePath );
 
@@ -5502,7 +5518,9 @@ void MainWindow::onAddToSteamBtnClicked()
 	}
 
 	QMessageBox::information( this, "Added to Steam",
-		"Shortcut \""%shortcutName%"\" was added to Steam. Restart Steam to see it in your Library under the \"Non-Steam\" category."
+		"Shortcut \""%shortcutName%"\" was added to Steam.\n\n"
+		"Fully quit Steam (if it is running) and start it again - the shortcut will then appear in your Library "
+		"under the \"Non-Steam\" category."
 	);
 
  #else

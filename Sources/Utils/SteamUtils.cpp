@@ -325,6 +325,28 @@ QString findShortcutsFile( QString & steamDirOut )
 //----------------------------------------------------------------------------------------------------------------------
 // public API
 
+bool isSteamRunning()
+{
+	// the main Steam client process is called "steam"; look it up in /proc/<pid>/comm
+	QDir procDir( "/proc" );
+	const QStringList entries = procDir.entryList( QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name );
+	for (const QString & entry : entries)
+	{
+		bool isNumber = false;
+		entry.toInt( &isNumber );
+		if (!isNumber)
+			continue;
+
+		QFile commFile( procDir.filePath( entry % "/comm" ) );
+		if (!commFile.open( QIODevice::ReadOnly ))
+			continue;
+		const QString comm = QString::fromUtf8( commFile.readAll() ).trimmed();
+		if (comm == "steam")
+			return true;
+	}
+	return false;
+}
+
 QString addShortcut( const QString & name, const QString & exePath, const QString & startDir, const QString & launchOptions, bool * alreadyExisted )
 {
 	if (alreadyExisted)
@@ -424,6 +446,11 @@ QString addShortcut( const QString & name, const QString & exePath, const QStrin
 }
 
 #else  // non-Linux platforms
+
+bool isSteamRunning()
+{
+	return false;
+}
 
 QString addShortcut( const QString & /*name*/, const QString & /*exePath*/, const QString & /*startDir*/, const QString & /*launchOptions*/, bool * /*alreadyExisted*/ )
 {

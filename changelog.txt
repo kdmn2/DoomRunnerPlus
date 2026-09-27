@@ -1,3 +1,8 @@
+2.0.5
+- "Add to Steam" now detects a running Steam client and warns that the shortcut may not appear or may be
+  overwritten when Steam exits (Steam reads its shortcuts only at startup and saves them back from memory) -
+  it recommends fully quitting Steam before adding the shortcut
+
 2.0.4
 - fixed "Add to Steam" not creating a working shortcut when there were no shortcuts in Steam yet - the new
   shortcut was missing the entry index key (and one map terminator), so Steam ignored the freshly created file
