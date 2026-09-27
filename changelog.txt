@@ -1,3 +1,7 @@
+2.0.4
+- fixed "Add to Steam" not creating a working shortcut when there were no shortcuts in Steam yet - the new
+  shortcut was missing the entry index key (and one map terminator), so Steam ignored the freshly created file
+
 2.0.3
 - fixed "Add to Steam" accidentally wiping all existing Steam shortcuts - the shortcuts.vdf file is no longer
   re-serialized from scratch, a new shortcut is now appended as raw bytes while leaving all existing entries

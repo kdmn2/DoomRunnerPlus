@@ -363,8 +363,12 @@ QString addShortcut( const QString & name, const QString & exePath, const QStrin
 	{
 		// no shortcuts yet - create the file from scratch
 		newData = ShortcutsHeader;
+		newData.append( char( TypeMap ) );
+		newData.append( QByteArray::number( 0 ) );  // first entry index key
+		newData.append( '\0' );
 		newData.append( serializeShortcutEntry( name, exePath, startDir, launchOptions ) );
-		newData.append( char( EndOfMap ) );
+		newData.append( char( EndOfMap ) );  // end of the entry
+		newData.append( char( EndOfMap ) );  // end of the "shortcuts" map
 	}
 	else
 	{
