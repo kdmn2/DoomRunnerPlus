@@ -5485,10 +5485,19 @@ void MainWindow::onAddToSteamBtnClicked()
 
 	const QString launchOptions = cmd.arguments.join( ' ' );
 
-	const QString error = steam::addShortcut( shortcutName, shortcutExe, engineExeDir, launchOptions );
+	bool alreadyExisted = false;
+	const QString error = steam::addShortcut( shortcutName, shortcutExe, engineExeDir, launchOptions, &alreadyExisted );
 	if (!error.isEmpty())
 	{
 		reportRuntimeError( "Cannot add to Steam", error );
+		return;
+	}
+
+	if (alreadyExisted)
+	{
+		QMessageBox::information( this, "Already in Steam",
+			"A Steam shortcut named \""%shortcutName%"\" already exists, so nothing was changed."
+		);
 		return;
 	}
 

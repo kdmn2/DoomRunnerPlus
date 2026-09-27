@@ -1,3 +1,10 @@
+2.0.3
+- fixed "Add to Steam" accidentally wiping all existing Steam shortcuts - the shortcuts.vdf file is no longer
+  re-serialized from scratch, a new shortcut is now appended as raw bytes while leaving all existing entries
+  byte-for-byte untouched, and the file is written atomically (a crash can no longer leave it half-written)
+- if a shortcut with the same name already exists, nothing is changed and the app now reports it instead of
+  silently updating/duplicating
+
 2.0.2
 - added an "Add to Steam" button next to the "Launch!" button, which registers the current final launch command
   as a non-Steam game shortcut in Steam (Linux only), so the game can be launched directly from Steam or Steam's

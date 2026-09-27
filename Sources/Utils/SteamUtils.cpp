@@ -13,9 +13,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QStringList>
-
-#include <limits>
 
 #if !IS_WINDOWS && !IS_MACOS  // the whole module only makes sense on Linux, but keep it compilable everywhere
 #define STEAM_UTILS_ACTIVE 1
@@ -37,6 +36,9 @@ constexpr quint8 TypeString = 0x01;
 constexpr quint8 TypeInt32  = 0x02;
 constexpr quint8 TypeInt64  = 0x03;  // e.g. LastPlayTime
 constexpr quint8 EndOfMap   = 0x08;
+
+// The shortcuts.vdf file always starts with this byte sequence: 00 "shortcuts" 00
+const QByteArray ShortcutsHeader( "\x00" "shortcuts" "\x00", 11 );
 
 struct VdfNode
 {
@@ -209,107 +211,64 @@ class VdfReader
 	 int _pos = 0;
 };
 
-void serializeString( QByteArray & out, const QString & str )
-{
-	out.append( char( TypeString ) );
-	out.append( str.toUtf8() );
-	out.append( '\0' );
-}
-
-void serializeEntry( QByteArray & out, const VdfNode & entry )
-{
-	for (const VdfNode & child : entry.children)
-	{
-		if (child.type == TypeString)
-		{
-			serializeString( out, child.key );
-			out.append( child.str );
-			out.append( '\0' );
-		}
-		else if (child.type == TypeInt32 || child.type == TypeInt64)
-		{
-			// quirk of shortcuts.vdf: the "appid" field is marked with the map type even though it holds an int32
-			const quint8 marker = (child.key == "appid") ? TypeMap : child.type;
-			out.append( char( marker ) );
-			out.append( child.key.toUtf8() );
-			out.append( '\0' );
-			const int byteCount = (child.type == TypeInt32) ? 4 : 8;
-			for (int i = 0; i < byteCount; ++i)
-				out.append( char( quint8( (child.integer >> (8 * i)) & 0xFF ) ) );
-		}
-		else if (child.type == TypeMap)
-		{
-			out.append( char( TypeMap ) );
-			out.append( child.key.toUtf8() );
-			out.append( '\0' );
-			serializeEntry( out, child );
-			out.append( char( EndOfMap ) );
-		}
-	}
-}
-
 /// The VDF values for Exe and StartDir are stored with surrounding double quotes.
 QString quoteVdfPath( const QString & path )
 {
 	return '"'%path%'"';
 }
 
-QString unquoteVdfPath( const QString & path )
+/// Serializes a single shortcut entry (its fields only, without the leading index key).
+/** The field set and order match what Steam itself writes, including the quirks
+  * (appid typed as 0x00, quoted Exe/StartDir values, empty "tags" map). */
+QByteArray serializeShortcutEntry( const QString & name, const QString & exePath, const QString & startDir, const QString & launchOptions )
 {
-	if (path.size() >= 2 && path.startsWith('"') && path.endsWith('"'))
-		return path.mid( 1, path.size() - 2 );
-	return path;
-}
+	QByteArray out;
 
-VdfNode * findChild( VdfNode & map, const QString & key )
-{
-	for (VdfNode & child : map.children)
-		if (child.key == key)
-			return &child;
-	return nullptr;
-}
-
-VdfNode makeStringNode( const QString & key, const QString & value )
-{
-	VdfNode node;
-	node.type = TypeString;
-	node.key = key;
-	node.str = value.toUtf8();
-	return node;
-}
-
-VdfNode makeInt32Node( const QString & key, qint32 value )
-{
-	VdfNode node;
-	node.type = TypeInt32;
-	node.key = key;
-	node.integer = value;
-	return node;
-}
-
-VdfNode makeShortcutEntry( const QString & name, const QString & exePath, const QString & startDir, const QString & launchOptions )
-{
-	VdfNode entry;
-	entry.type = TypeMap;
-	entry.children = {
-		makeInt32Node( "appid", 0 ),           // Steam computes the real app ID from the exe path and name
-		makeStringNode( "AppName", name ),
-		makeStringNode( "Exe", quoteVdfPath( exePath ) ),
-		makeStringNode( "StartDir", quoteVdfPath( startDir ) ),
-		makeStringNode( "icon", "" ),
-		makeStringNode( "ShortcutPath", "" ),
-		makeInt32Node( "IsHidden", 0 ),
-		makeInt32Node( "AllowDesktopConfig", 1 ),
-		makeInt32Node( "AllowOverlay", 1 ),
-		makeInt32Node( "openvr", 0 ),
-		makeInt32Node( "LastPlayTime", 0 ),
-		makeStringNode( "LaunchOptions", launchOptions ),
+	auto appendKey = [&out]( const char * key )
+	{
+		out.append( key, int( qstrlen( key ) ) );
+		out.append( '\0' );
 	};
-	VdfNode tags;
-	tags.type = TypeMap;
-	tags.key = "tags";
-	entry.children.append( std::move( tags ) );
-	return entry;
+
+	auto writeStringField = [&]( const char * key, const QString & value )
+	{
+		out.append( char( TypeString ) );
+		appendKey( key );
+		out.append( value.toUtf8() );
+		out.append( '\0' );
+	};
+
+	auto writeInt32Field = [&]( const char * key, qint32 value )
+	{
+		out.append( char( TypeInt32 ) );
+		appendKey( key );
+		for (int i = 0; i < 4; ++i)
+			out.append( char( quint8( (value >> (8 * i)) & 0xFF ) ) );
+	};
+
+	// the "appid" field is marked with the map type (0x00) even though it holds an int32
+	out.append( char( TypeMap ) );
+	appendKey( "appid" );
+	out.append( QByteArray( 4, '\0' ) );  // appid = 0, Steam computes the real app ID from the exe path and name
+
+	writeStringField( "AppName", name );
+	writeStringField( "Exe", quoteVdfPath( exePath ) );
+	writeStringField( "StartDir", quoteVdfPath( startDir ) );
+	writeStringField( "icon", "" );
+	writeStringField( "ShortcutPath", "" );
+	writeInt32Field( "IsHidden", 0 );
+	writeInt32Field( "AllowDesktopConfig", 1 );
+	writeInt32Field( "AllowOverlay", 1 );
+	writeInt32Field( "openvr", 0 );
+	writeInt32Field( "LastPlayTime", 0 );
+	writeStringField( "LaunchOptions", launchOptions );
+
+	// empty "tags" map
+	out.append( char( TypeMap ) );
+	appendKey( "tags" );
+	out.append( char( EndOfMap ) );
+
+	return out;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -366,8 +325,11 @@ QString findShortcutsFile( QString & steamDirOut )
 //----------------------------------------------------------------------------------------------------------------------
 // public API
 
-QString addShortcut( const QString & name, const QString & exePath, const QString & startDir, const QString & launchOptions )
+QString addShortcut( const QString & name, const QString & exePath, const QString & startDir, const QString & launchOptions, bool * alreadyExisted )
 {
+	if (alreadyExisted)
+		*alreadyExisted = false;
+
 	QString steamDir;
 	const QString shortcutsPath = findShortcutsFile( steamDir );
 	if (shortcutsPath.isEmpty())
@@ -384,9 +346,9 @@ QString addShortcut( const QString & name, const QString & exePath, const QStrin
 
 	// read the current shortcuts, if any
 	QByteArray data;
-	QFile file( shortcutsPath );
-	if (file.exists())
+	if (QFileInfo::exists( shortcutsPath ))
 	{
+		QFile file( shortcutsPath );
 		if (!file.open( QIODevice::ReadOnly ))
 		{
 			return "Cannot open file "%quoted( shortcutsPath )%" for reading (" % file.errorString() % ")";
@@ -395,64 +357,61 @@ QString addShortcut( const QString & name, const QString & exePath, const QStrin
 		file.close();
 	}
 
-	// parse the current shortcuts
-	VdfNode root;  // root map ("shortcuts"), its children are the individual shortcut entries
-	if (!data.isEmpty())
+	QByteArray newData;
+
+	if (data.isEmpty())
 	{
+		// no shortcuts yet - create the file from scratch
+		newData = ShortcutsHeader;
+		newData.append( serializeShortcutEntry( name, exePath, startDir, launchOptions ) );
+		newData.append( char( EndOfMap ) );
+	}
+	else
+	{
+		// never touch a file we don't fully understand - validate its structure first
+		if (!data.startsWith( ShortcutsHeader ) || !data.endsWith( char( EndOfMap ) ))
+		{
+			return "The file "%quoted( shortcutsPath )%" does not look like a valid Steam shortcuts file, refusing to modify it.";
+		}
+
+		// if a shortcut with the same name already exists, leave the file completely untouched
+		// (the AppName field is stored as: 01 "AppName" 00 <name> 00)
+		const QByteArray appNameField = QByteArray( "\x01" "AppName" "\x00", 9 ) % name.toUtf8() % QByteArray( "\x00", 1 );
+		if (data.contains( appNameField ))
+		{
+			if (alreadyExisted)
+				*alreadyExisted = true;
+			return {};
+		}
+
+		// count the entries only to pick the next index key (the actual data is never re-serialized)
 		QString parseError;
 		VdfReader reader( data );
-		root = reader.parseRoot( parseError );
+		VdfNode root = reader.parseRoot( parseError );
 		if (!parseError.isEmpty())
 		{
 			return "Cannot parse file "%quoted( shortcutsPath )%" (" % parseError % ")";
 		}
-	}
-	else
-	{
-		root.type = TypeMap;
-		root.key = "shortcuts";
+		const int nextIndex = root.children.size();
+
+		// append the new entry as raw bytes right before the final 0x08 terminator,
+		// leaving every existing byte untouched
+		newData = data.left( data.size() - 1 );
+		newData.append( char( TypeMap ) );
+		newData.append( QByteArray::number( nextIndex ) );
+		newData.append( '\0' );
+		newData.append( serializeShortcutEntry( name, exePath, startDir, launchOptions ) );
+		newData.append( char( EndOfMap ) );
+		newData.append( char( EndOfMap ) );
 	}
 
-	// update an existing entry with the same name and executable, or append a new one
-	bool updatedExisting = false;
-	for (VdfNode & entry : root.children)
-	{
-		const VdfNode * appName = findChild( entry, "AppName" );
-		const VdfNode * exe = findChild( entry, "Exe" );
-		if (!appName || !exe || !appName->isString() || !exe->isString())
-			continue;
-		if (QString::fromUtf8( appName->str ) == name && unquoteVdfPath( QString::fromUtf8( exe->str ) ) == exePath)
-		{
-			findChild( entry, "AppName" )->str = name.toUtf8();
-			findChild( entry, "Exe" )->str = quoteVdfPath( exePath ).toUtf8();
-			findChild( entry, "StartDir" )->str = quoteVdfPath( startDir ).toUtf8();
-			VdfNode * launchOpts = findChild( entry, "LaunchOptions" );
-			if (launchOpts && launchOpts->isString())
-				launchOpts->str = launchOptions.toUtf8();
-			updatedExisting = true;
-			break;
-		}
-	}
-	if (!updatedExisting)
-	{
-		VdfNode entry = makeShortcutEntry( name, exePath, startDir, launchOptions );
-		entry.key = QString::number( root.children.size() );
-		root.children.append( std::move( entry ) );
-	}
-
-	// serialize and write back
-	QByteArray out;
-	out.append( char( TypeMap ) );
-	out.append( root.key.toUtf8() );
-	out.append( '\0' );
-	serializeEntry( out, root );
-	out.append( char( EndOfMap ) );
-
-	if (!file.open( QIODevice::WriteOnly | QIODevice::Truncate ))
+	// write atomically - if this fails, the original file is left intact
+	QSaveFile file( shortcutsPath );
+	if (!file.open( QIODevice::WriteOnly ))
 	{
 		return "Cannot open file "%quoted( shortcutsPath )%" for writing (" % file.errorString() % ")";
 	}
-	if (file.write( out ) != out.size())
+	if (file.write( newData ) != newData.size() || !file.commit())
 	{
 		return "Error writing to file "%quoted( shortcutsPath )%" (" % file.errorString() % ")";
 	}
@@ -462,7 +421,7 @@ QString addShortcut( const QString & name, const QString & exePath, const QStrin
 
 #else  // non-Linux platforms
 
-QString addShortcut( const QString & /*name*/, const QString & /*exePath*/, const QString & /*startDir*/, const QString & /*launchOptions*/ )
+QString addShortcut( const QString & /*name*/, const QString & /*exePath*/, const QString & /*startDir*/, const QString & /*launchOptions*/, bool * /*alreadyExisted*/ )
 {
 	return "This feature only works on Linux.";
 }
