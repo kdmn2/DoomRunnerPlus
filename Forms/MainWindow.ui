@@ -2761,6 +2761,22 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="addToSteamBtn">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>56</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Add the final launch command to Steam as a non-Steam game, so that it can be launched directly from Steam</string>
+         </property>
+         <property name="text">
+          <string>Add to Steam</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="launchBtn">
          <property name="minimumSize">
           <size>

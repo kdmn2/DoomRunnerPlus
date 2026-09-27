@@ -76,6 +76,7 @@ HEADERS += \
 	Sources/Utils/Pk3Reader.hpp \
 	Sources/Utils/PtrList.hpp \
 	Sources/Utils/StandardOutput.hpp \
+	Sources/Utils/SteamUtils.hpp \
 	Sources/Utils/StringUtils.hpp \
 	Sources/Utils/TimeStats.hpp \
 	Sources/Utils/TypeTraits.hpp \
@@ -144,6 +145,7 @@ SOURCES += \
 	Sources/Utils/Pk3Reader.cpp \
 	Sources/Utils/PtrList.cpp \
 	Sources/Utils/StandardOutput.cpp \
+	Sources/Utils/SteamUtils.cpp \
 	Sources/Utils/StringUtils.cpp \
 	Sources/Utils/TypeTraitsTest.cpp \
 	Sources/Utils/UniqueIdGenerator.cpp \
@@ -209,12 +211,15 @@ CONFIG(debug, debug|release) {
 win32 {
 	DEFINES += IS_WINDOWS=true
 	DEFINES += IS_MACOS=false
+	DEFINES += IS_LINUX=false
 } else: macx {
 	DEFINES += IS_WINDOWS=false
 	DEFINES += IS_MACOS=true
+	DEFINES += IS_LINUX=false
 } else {
 	DEFINES += IS_WINDOWS=false
 	DEFINES += IS_MACOS=false
+	DEFINES += IS_LINUX=true
 }
 
 

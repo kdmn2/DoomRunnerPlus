@@ -239,6 +239,7 @@ elif [ $PACKAGE_TYPE == appimage ]; then
 	fi
 
 	echo
+	# 1st pass: deploy the executable, dependencies and Qt plugins into the AppDir
 	COMMAND="$DEPLOY_TOOL
       --executable \"$EXECUTABLE_PATH\"
       --desktop-file \"$SOURCE_DIR/Install/XDG/$DESKTOP_FILE_NAME.desktop\"
@@ -246,9 +247,68 @@ elif [ $PACKAGE_TYPE == appimage ]; then
       --icon-filename $PROJECT_NAME
       --appdir \"$BUILD_DIR/AppDir\"
       --plugin qt
+      "
+	echo_and_eval "$COMMAND" || exit $((100+$?))
+
+	# linuxdeploy also bundles libproxy together with its backend library
+	# (libpxbackend-1.0.so), which depends on libcurl. When the AppImage is launched
+	# from Steam's Game Mode, Steam's runtime provides an old libcurl.so.4 in
+	# LD_LIBRARY_PATH which lacks the CURL_OPENSSL_4 symbol version -> the dynamic
+	# loader aborts the process before Qt even starts. The app does not need proxy
+	# support, so replace libproxy with a dependency-free stub that always reports
+	# a direct connection, and drop the now-unneeded backend libraries.
+	GCC_TOOL=$(which gcc) || true
+	if [ -z "$GCC_TOOL" ]; then
+		echo "Compiler not available: gcc"
+		echo "Please install it first"
+		echo "Packaging aborted."
+		exit 2
+	fi
+	if [ -f "AppDir/usr/lib/libproxy.so.1" ]; then
+		$GCC_TOOL -shared -fPIC \
+			-Wl,-soname,libproxy.so.1 \
+			-Wl,--version-script="$SOURCE_DIR/Packaging/appimage/libproxy_stub.map" \
+			-o "AppDir/usr/lib/libproxy.so.1" \
+			"$SOURCE_DIR/Packaging/appimage/libproxy_stub.c"
+		rm -f "AppDir/usr/lib/libpxbackend-1.0.so"
+		rm -f "AppDir/usr/lib/libcurl-gnutls.so.4"
+		rm -f "AppDir/usr/lib/libduktape.so.207"
+	fi
+
+	# make sure the stub survived and the libcurl dependency chain is really gone
+	if [ -f "AppDir/usr/lib/libproxy.so.1" ] && readelf -d "AppDir/usr/lib/libproxy.so.1" | grep -q "pxbackend\|libcurl"; then
+		echo "Failed to replace libproxy with the proxy stub, the AppImage would not run in Steam's Game Mode"
+		echo "Packaging aborted."
+		exit 4
+	fi
+
+	echo
+	# 2nd pass: produce the AppImage from the patched AppDir
+	COMMAND="$DEPLOY_TOOL
+      --appdir \"$BUILD_DIR/AppDir\"
       --output appimage
       "
 	echo_and_eval "$COMMAND" || exit $((100+$?))
+
+	# if the 2nd pass redeployed the real libproxy over the stub, re-patch and re-package once
+	if [ -f "AppDir/usr/lib/libproxy.so.1" ] && readelf -d "AppDir/usr/lib/libproxy.so.1" | grep -q "pxbackend\|libcurl"; then
+		echo "The proxy stub was overwritten during packaging, re-patching and re-packaging"
+		$GCC_TOOL -shared -fPIC \
+			-Wl,-soname,libproxy.so.1 \
+			-Wl,--version-script="$SOURCE_DIR/Packaging/appimage/libproxy_stub.map" \
+			-o "AppDir/usr/lib/libproxy.so.1" \
+			"$SOURCE_DIR/Packaging/appimage/libproxy_stub.c"
+		rm -f "AppDir/usr/lib/libpxbackend-1.0.so"
+		rm -f "AppDir/usr/lib/libcurl-gnutls.so.4"
+		rm -f "AppDir/usr/lib/libduktape.so.207"
+		rm -f "$APP_NAME_UNDERSCORED-$CPU_ARCH.AppImage"
+		echo_and_eval "$COMMAND" || exit $((100+$?))
+		if readelf -d "AppDir/usr/lib/libproxy.so.1" | grep -q "pxbackend\|libcurl"; then
+			echo "Failed to replace libproxy with the proxy stub, the AppImage would not run in Steam's Game Mode"
+			echo "Packaging aborted."
+			exit 4
+		fi
+	fi
 
 	# some tools will just always do their own thing, no matter what -_-
 	TEMP_PACKAGE_NAME="$APP_NAME_UNDERSCORED-$CPU_ARCH.AppImage"

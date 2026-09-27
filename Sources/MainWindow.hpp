@@ -212,6 +212,7 @@ class MainWindow : public QMainWindow, private DialogWithPaths {
 	void onGamescopeArgsChanged( const QString & text );
 
 	void onLaunchBtnClicked();
+	void onAddToSteamBtnClicked();
 
 	void onCrashWatchTick();
 

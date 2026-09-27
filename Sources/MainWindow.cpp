@@ -53,6 +53,7 @@
 #include "Utils/WidgetUtils.hpp"
 #include "Utils/MiscUtils.hpp"  // areScreenCoordinatesValid, makeFileFilter, splitCommandLineArguments
 #include "Utils/ErrorHandling.hpp"
+#include "Utils/SteamUtils.hpp"
 
 #include <QStringBuilder>
 #include <QTextStream>  // exportPresetToScript, loadMonitorInfo
@@ -1256,6 +1257,8 @@ MainWindow::MainWindow()
 	connect( ui->gamescopeChkBox, &QCheckBox::toggled, this, &ThisClass::onGamescopeToggled );
 	connect( ui->gamescopeArgsLine, &QLineEdit::textChanged, this, &ThisClass::onGamescopeArgsChanged );
 	connect( ui->launchBtn, &QPushButton::clicked, this, &ThisClass::onLaunchBtnClicked );
+	connect( ui->addToSteamBtn, &QPushButton::clicked, this, &ThisClass::onAddToSteamBtnClicked );
+	ui->addToSteamBtn->setVisible( IS_LINUX );  // this feature only works on Linux
 
 	connect( &crashWatchTimer_, &QTimer::timeout, this, &ThisClass::onCrashWatchTick );
 
@@ -5416,6 +5419,88 @@ void MainWindow::onGamescopeArgsChanged( const QString & text )
 void MainWindow::onLaunchBtnClicked()
 {
 	executeLaunchCommand();
+}
+
+void MainWindow::onAddToSteamBtnClicked()
+{
+ #if IS_LINUX
+
+	if (!selectedPreset)
+	{
+		reportUserError( "No preset selected", "Select a preset from the preset list." );
+		return;
+	}
+	if (!selectedEngine)
+	{
+		reportUserError( "No engine selected", "No Doom engine is selected." );
+		return;  // no point in generating a command if we don't even know the engine, it determines everything
+	}
+
+	// propose a shortcut name based on the currently selected map pack and engine
+	QString proposedName;
+	if (selectedIWAD && !selectedIWAD->path.isEmpty())
+		proposedName = fs::getParentDirName( selectedIWAD->path ) % " ("%selectedEngine->name%")";
+	else
+		proposedName = selectedEngine->name;
+
+	bool confirmed = false;
+	const QString shortcutName = QInputDialog::getText(
+		this, "Add to Steam", "Name of the new Steam shortcut:", QLineEdit::Normal, proposedName, &confirmed
+	);
+	if (!confirmed || shortcutName.isEmpty())  // user probably clicked cancel
+	{
+		return;
+	}
+
+	const QString currentWorkingDir = pathConvertor.workingDir().path();
+	const QString engineExeDir = fs::getAbsoluteParentDir( selectedEngine->executablePath );
+
+	// The shortcut will point directly at the engine's executable (or the command prefix, if one is set),
+	// with the rest of the final launch command as launch options.
+	// - The engine must be launched using absolute path, because some engines cannot handle being started
+	//   from another directory with relative executable path.
+	// - All other paths will be relative to the engine's dir, because Steam will start the shortcut
+	//   with the working directory set to the engine's dir.
+	// - Paths need to be quoted, because Steam passes the launch options as a single string.
+	auto cmd = generateLaunchCommand({
+		.selectedEngine = *selectedEngine,
+		.exePathStyle = PathStyle::Absolute,
+		.runnersWorkingDir = currentWorkingDir,
+		.quotePaths = true,
+		.verifyPaths = false,
+	});
+
+	if (cmd.executable.isNull())
+	{
+		return;  // errors are already shown during the generation
+	}
+
+	QString shortcutExe = cmd.executable;
+	if (!QFileInfo( shortcutExe ).isAbsolute())  // e.g. a command prefix like "gamescope" - Steam needs an absolute path
+	{
+		const QString resolvedExe = QStandardPaths::findExecutable( shortcutExe );
+		if (!resolvedExe.isEmpty())
+			shortcutExe = resolvedExe;
+	}
+
+	const QString launchOptions = cmd.arguments.join( ' ' );
+
+	const QString error = steam::addShortcut( shortcutName, shortcutExe, engineExeDir, launchOptions );
+	if (!error.isEmpty())
+	{
+		reportRuntimeError( "Cannot add to Steam", error );
+		return;
+	}
+
+	QMessageBox::information( this, "Added to Steam",
+		"Shortcut \""%shortcutName%"\" was added to Steam. Restart Steam to see it in your Library under the \"Non-Steam\" category."
+	);
+
+ #else
+
+	reportUserError( "Not supported", "This feature only works on Linux." );
+
+ #endif
 }
 
 void MainWindow::nextMainTab()

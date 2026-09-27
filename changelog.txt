@@ -1,3 +1,13 @@
+2.0.1
+- added an "Add to Steam" button next to the "Launch!" button, which registers the current final launch command
+  as a non-Steam game shortcut in Steam (Linux only), so the game can be launched directly from Steam or Steam's
+  Game Mode without opening the launcher
+- the suggested Steam shortcut name is composed of the folder containing the selected IWAD and the engine name
+  (e.g. "Supermap (GZDoom)") and can be confirmed or edited in a dialog
+- fixed the AppImage crashing in Steam's Game Mode before the app even started - the bundled libproxy pulled in
+  Steam's old libcurl via its backend library; libproxy is now replaced by a dependency-free stub that always
+  reports a direct connection, so no launch-options workaround is needed anymore
+
 1.9.2
 - added auto-detection and basic support for UZDoom, nugget-doom and cherry-doom
 - added an option to sort map files by name, type, size and date
