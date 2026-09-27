@@ -2,6 +2,13 @@
 - "Add to Steam" now detects a running Steam client and warns that the shortcut may not appear or may be
   overwritten when Steam exits (Steam reads its shortcuts only at startup and saves them back from memory) -
   it recommends fully quitting Steam before adding the shortcut
+- added a 30 second timeout to all network requests (update check, /idgames search & downloads, Cacowards and
+  Top WADs refresh/resolve/download), so a stalled server can no longer hang the app forever
+- escaped file paths embedded in the macOS Finder AppleScript - a file name containing a quote could previously
+  break out of the string literal and inject AppleScript code
+- capped the total extracted size of downloaded archives at 2 GB, so a malicious archive can no longer fill the disk
+- fixed a potential integer overflow when reading the lump directory offset of a malformed WAD
+- capped config file reads at 64 MB instead of loading an arbitrarily large file into memory
 
 2.0.4
 - fixed "Add to Steam" not creating a working shortcut when there were no shortcuts in Steam yet - the new

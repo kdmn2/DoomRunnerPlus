@@ -127,6 +127,14 @@ QString readWholeFile( const QString & filePath, QByteArray & dest )
 		return "Could not open file "%filePath%" for reading ("%file.errorString()%")";
 	}
 
+	// refuse to read a nonsensically large file into memory
+	constexpr qint64 MaxFileSize = 64 * 1024 * 1024;
+	if (file.size() > MaxFileSize)
+	{
+		file.close();
+		return "File "%filePath%" is too large to read ("%QString::number( file.size() )%" bytes).";
+	}
+
 	dest = file.readAll();
 	if (file.error() != QFile::NoError)
 	{

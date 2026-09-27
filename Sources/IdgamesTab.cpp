@@ -107,6 +107,8 @@ IdgamesTab::IdgamesTab( QWidget * parent )
 	: QWidget( parent ),
 	  network_( new QNetworkAccessManager( this ) )
 {
+	// don't let a stalled server hang a search or download forever
+	network_->setTransferTimeout( 30000 );
 	buildUi();
 }
 

@@ -160,6 +160,8 @@ bool extractZipArchive( const QString & zipFilePath, const QString & targetDir )
 	if (unzGoToFirstFile( zipFile ) != UNZ_OK)
 		return true;  // empty archive
 
+	qint64 totalExtractedBytes = 0;
+
 	do
 	{
 		char nameBuffer [4096];
@@ -192,15 +194,25 @@ bool extractZipArchive( const QString & zipFilePath, const QString & targetDir )
 		if (!outFile.open( QIODevice::WriteOnly ))
 			return false;
 
+		// Cap the total extracted size so a malicious archive can't fill the disk (zip bomb).
+		// 2 GB of extracted WADs/mods is far beyond any real mod collection.
+		constexpr qint64 MaxTotalExtractedBytes = 2LL * 1024 * 1024 * 1024;
+
 		char buffer [64 * 1024];
 		int bytesRead;
 		while ((bytesRead = unzReadCurrentFile( zipFile, buffer, sizeof(buffer) )) > 0)
 		{
+			if (totalExtractedBytes + bytesRead > MaxTotalExtractedBytes)
+			{
+				outFile.close();
+				return false;
+			}
 			if (outFile.write( buffer, bytesRead ) != bytesRead)
 			{
 				outFile.close();
 				return false;
 			}
+			totalExtractedBytes += bytesRead;
 		}
 		outFile.close();
 

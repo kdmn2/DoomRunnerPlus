@@ -119,6 +119,8 @@ TopWadsTab::TopWadsTab( QWidget * parent )
 	: QWidget( parent ),
 	  network_( new QNetworkAccessManager( this ) )
 {
+	// don't let a stalled server hang a refresh, resolve or download forever
+	network_->setTransferTimeout( 30000 );
 	buildUi();
 }
 

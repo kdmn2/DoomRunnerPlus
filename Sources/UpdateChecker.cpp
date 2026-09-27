@@ -40,6 +40,8 @@ UpdateChecker::UpdateChecker()
 :
 	LoggingComponent( u"UpdateChecker" )
 {
+	// don't let a stalled server hang the request forever
+	manager.setTransferTimeout( 30000 );
 	QObject::connect( &manager, &QNetworkAccessManager::finished, this, &UpdateChecker::requestFinished );
 }
 

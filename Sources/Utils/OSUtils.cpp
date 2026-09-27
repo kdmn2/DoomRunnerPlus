@@ -937,10 +937,14 @@ static int openEntryInFileBrowser( const QString & entryPath, bool openParentAnd
 	{
 		QString program = "/usr/bin/osascript";
 		QString command = openParentAndSelect ? "select" : "open";
+		// the path is embedded into an AppleScript string literal, so escape backslashes and quotes
+		// (a file name containing a double quote would otherwise break out of the literal and inject code)
+		QString posixPath = fs::toNativePath( entry.canonicalFilePath() );
+		posixPath.replace( '\\', "\\\\" ).replace( '"', "\\\"" );
 		QStringList args;
 		args << "-e" << "tell application \"Finder\"";
 		args << "-e" <<     "activate";
-		args << "-e" <<     command%" (\""%fs::toNativePath( entry.canonicalFilePath() )%"\" as POSIX file)";
+		args << "-e" <<     command%" (\""%posixPath%"\" as POSIX file)";
 		args << "-e" << "end tell";
 		// https://doc.qt.io/qt-6/qprocess.html#execute
 		return QProcess::execute( program, args );

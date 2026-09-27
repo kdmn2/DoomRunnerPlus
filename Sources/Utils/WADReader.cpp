@@ -187,7 +187,7 @@ UncertainWadInfo LoggingWadReader::readWadInfo()
 		return wadInfo;
 	}
 	qint64 lumpDirSize = header.numLumps * sizeof(LumpEntry);
-	if (header.lumpDirOffset + lumpDirSize > fileSize)
+	if (qint64( header.lumpDirOffset ) + lumpDirSize > fileSize)  // cast to 64-bit, the fields are only 32-bit
 	{
 		logDebug() << _filePath << ": lump header points beyond the end of file";
 		wadInfo.status = ReadStatus::InvalidFormat;
