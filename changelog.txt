@@ -1,4 +1,4 @@
-2.0.1
+2.0.2
 - added an "Add to Steam" button next to the "Launch!" button, which registers the current final launch command
   as a non-Steam game shortcut in Steam (Linux only), so the game can be launched directly from Steam or Steam's
   Game Mode without opening the launcher
